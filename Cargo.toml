@@ -10,4 +10,10 @@ keywords = ["yew", "trunk"]
 categories = ["gui", "wasm", "web-programming"]
 
 [dependencies]
-yew = { version="0.20", features=["csr"] }
+yew = { version = "0.20", features = ["csr"] }
+wasm-bindgen = "0.2.84"
+js-sys = "0.3.61"
+web-sys = "0.3.61"
+monaco = { git = "https://github.com/siku2/rust-monaco/", rev = "794a4cc7819f9ed7eb06559e24f75a41e23cf22a", features = ["yew", "yew-components"] }
+ramemu = { git = "https://github.com/AVO-cado-team/ramemu.git", tag = "0.1.4", features = ["wasm"]}
+
