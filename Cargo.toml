@@ -1,0 +1,13 @@
+[package]
+name = "ram-webgui"
+version = "0.1.0"
+edition = "2021"
+description = "Webgui for ramemu"
+readme = "README.md"
+repository = "https://github.com/AVO-cado-team/ramemu"
+license = "GPL3"
+keywords = ["yew", "trunk"]
+categories = ["gui", "wasm", "web-programming"]
+
+[dependencies]
+yew = { version="0.20", features=["csr"] }
