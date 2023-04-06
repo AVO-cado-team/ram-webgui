@@ -7,14 +7,9 @@ use monaco::{
 };
 use yew::prelude::*;
 
-const CONTENT: &str = r#"
-  HALT
-"#;
-
 pub fn get_options() -> CodeEditorOptions {
   CodeEditorOptions::default()
     .with_language("ram".to_owned())
-    .with_value(CONTENT.to_owned())
     .with_builtin_theme(BuiltinTheme::VsDark)
     .with_automatic_layout(true)
     .with_new_dimension(1000, 400)
@@ -37,6 +32,8 @@ pub fn custom_editor(props: &CustomEditorProps) -> Html {
     on_editor_created,
     text_model,
   } = props;
+
+  monaco::workers::ensure_environment_set();
 
   html! {
       <CodeEditor classes={"full-height"} options={ get_options().to_sys_options() } {on_editor_created} model={text_model.clone()} />

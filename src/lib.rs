@@ -1,5 +1,9 @@
 mod app;
 mod code_editor;
+mod error_display;
+mod footer;
+mod io;
+mod memory;
 
 use app::App;
 use wasm_bindgen::prelude::*;
