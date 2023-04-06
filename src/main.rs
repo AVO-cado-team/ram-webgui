@@ -1,7 +1,5 @@
-mod app;
-
-use app::App;
+use ram_webgui::run_app;
 
 fn main() {
-    yew::Renderer::<App>::new().render();
+  run_app().expect("Failed to run app");
 }
