@@ -29,7 +29,7 @@ pub struct App {
   text_model: TextModel,
   code: String,
   interpretator_output: String,
-  stdin: String,
+  // stdin: String,
   stdout: String,
   code_runner: Option<Rc<Closure<dyn Fn()>>>,
   reader: CustomReader,
@@ -53,7 +53,7 @@ impl Component for App {
       text_model: TextModel::create(INITIAL_CODE, Some("ram"), None).unwrap(),
       code: String::from(INITIAL_CODE),
       interpretator_output: Default::default(),
-      stdin: Default::default(),
+      // stdin: Default::default(),
       stdout: Default::default(),
       reader: CustomReader::new(),
       writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
@@ -75,7 +75,11 @@ impl Component for App {
           let keycode = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
           let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
 
-          raw_editor.add_command(keycode.into(), (*code_runner).as_ref().unchecked_ref(), None);
+          raw_editor.add_command(
+            keycode.into(),
+            (*code_runner).as_ref().unchecked_ref(),
+            None,
+          );
         });
 
         false
@@ -102,9 +106,10 @@ impl Component for App {
         true
       }
       Msg::InputChanged(data) => {
-        self.stdin = data;
-        self.stdin.push('\n');
-        self.reader.set_input(self.stdin.clone());
+        // self.stdin = data;
+        // self.stdin.push('\n');
+        // self.reader.set_input(self.stdin.clone());
+        self.reader.set_input(data + "\n");
         true
       }
     }

@@ -1,58 +1,31 @@
 #![allow(non_camel_case_types)]
 
-use web_sys::{HtmlInputElement, HtmlTextAreaElement};
+use web_sys::HtmlTextAreaElement;
 use yew::prelude::*;
-
-pub struct InputComponent {
-  on_change: Callback<String>,
-  input: String,
-}
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
   pub on_change: Callback<String>,
 }
 
-impl Component for InputComponent {
-  type Message = Msg;
-  type Properties = Props;
+#[function_component(InputComponent)]
+pub fn input_component(props: &Props) -> Html {
+  let on_change = props.on_change.clone();
 
-  fn create(ctx: &Context<Self>) -> Self {
-    Self {
-      on_change: ctx.props().on_change.clone(),
-      input: String::new(),
+  let handle_change = move |event: InputEvent| {
+    if let Some(input) = event.target_dyn_into::<HtmlTextAreaElement>() {
+      log::info!("Input value: {}", input.value());
+      on_change.emit(input.value());
     }
-  }
+  };
 
-  fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-    match msg {
-      Msg::UpdateInput(input) => {
-        self.input = input;
-        self.on_change.emit(self.input.clone());
-        true
-      }
-    }
+  html! {
+    <>
+      <textarea
+        class="user-input"
+        placeholder="Enter input"
+        oninput={handle_change}
+      />
+    </>
   }
-
-  fn view(&self, ctx: &Context<Self>) -> Html {
-    let onchange = ctx.link().batch_callback(|e: Event| {
-      Some(Msg::UpdateInput(
-        e.target_dyn_into::<HtmlTextAreaElement>()?.value(),
-      ))
-    });
-    html! {
-      <>
-        <textarea
-          class="user-input"
-          placeholder="Enter input"
-          value={self.input.clone()}
-          {onchange}
-        />
-      </>
-    }
-  }
-}
-
-pub enum Msg {
-  UpdateInput(String),
 }
