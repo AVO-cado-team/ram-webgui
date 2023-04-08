@@ -1,14 +1,17 @@
 use crate::code_editor::CustomEditor;
 use crate::io::custom_reader::CustomReader;
 use crate::io::custom_writer::CustomWriter;
-use std::cell::RefCell;
 use std::io::BufReader;
+use std::rc::Rc;
 
+use monaco::sys::KeyCode;
+use monaco::sys::KeyMod;
 use monaco::{api::TextModel, sys::editor::IStandaloneCodeEditor, yew::CodeEditorLink};
+
 use wasm_bindgen::closure::Closure;
+use yew::html::Scope;
 use yew::prelude::*;
 
-use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 use ramemu::program::Program;
 use ramemu::ram::Ram;
@@ -21,100 +24,103 @@ halt
 
 "#;
 
-#[function_component(App)]
-pub fn app() -> Html {
-  let text_model = use_state_eq(|| TextModel::create(INITIAL_CODE, Some("ram"), None).unwrap());
-  let code = use_state_eq(|| String::from(INITIAL_CODE));
-  let interpretator_output = use_state_eq(|| String::from(""));
+pub struct App {
+  link: Scope<Self>,
+  text_model: TextModel,
+  code: String,
+  interpretator_output: String,
+  stdout: String,
+  js_closure: Option<Rc<Closure<dyn Fn()>>>,
+  reader: CustomReader,
+  writer: CustomWriter,
+}
 
-  let stdout = use_state(|| String::from(""));
+pub enum Msg {
+  EditorCreated(CodeEditorLink),
+  CodeChanged,
+  WriterWrote(String),
+}
 
-  let reader = use_memo(|_| RefCell::new(CustomReader::new()), ());
-  let writer = use_memo(|_| Some(RefCell::new(CustomWriter::new())), ());
+impl Component for App {
+  type Message = Msg;
+  type Properties = ();
 
-  let stdout_clone = stdout.clone();
-  use_effect_with_deps(
-    move |writer| {
-      if let Some(writer) = &**writer {
-        log::info!("Setting callback");
-        let on_write = Callback::from(move |data: String| {
-          stdout_clone.set((*stdout_clone).clone() + &data);
-        });
+  fn create(ctx: &Context<Self>) -> Self {
+    let text_model = TextModel::create(INITIAL_CODE, Some("ram"), None).unwrap();
+    let code = String::from(INITIAL_CODE);
+    let interpretator_output = String::from("");
+    let stdout = String::from("");
+    let reader = CustomReader::new();
+    let writer = CustomWriter::new(ctx.link().callback(Msg::WriterWrote));
 
-        writer.borrow_mut().set_on_write(on_write);
-      }
-    },
-    writer.clone(),
-  );
+    Self {
+      link: ctx.link().clone(),
+      text_model,
+      code,
+      interpretator_output,
+      stdout,
+      reader,
+      writer,
+      js_closure: None,
+    }
+  }
 
-  let iout = interpretator_output.clone();
-  use_effect_with_deps(
-    move |code| {
-      let out = match Program::from_source(code) {
-        Ok(program) => {
-          let reader = BufReader::new(std::io::empty());
-          if let Some(writer) = &*writer {
-            let mut ram = Ram::new(program, Box::new(reader), Box::new(writer.borrow().clone()));
-            format!("{:?}", ram.run())
-          } else {
-            format!("No writer {}", "!")
-          }
-        }
-        Err(e) => format!("{:?}", e),
-      };
-      iout.set(out);
-    },
-    code.clone(),
-  );
+  fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+    match msg {
+      Msg::EditorCreated(editor_link) => {
+        let link = self.link.clone();
+        let js_closure = Rc::new(Closure::<dyn Fn()>::new(move || {
+          link.send_message(Msg::CodeChanged);
+        }));
 
-  let on_editor_created = {
-    let text_model = text_model.clone();
-    // let code = code.clone();
+        self.js_closure = Some(js_closure.clone());
 
-    let js_closure = {
-      let text_model = text_model.clone();
-
-      Closure::<dyn Fn()>::new(move || {
-        code.set(text_model.get_value());
-      })
-    };
-
-    use_callback(
-      move |editor_link: CodeEditorLink, _text_model| {
         editor_link.with_editor(|editor| {
-          // Registers Ctrl/Cmd + Enter hotkey
-          let keycode =
-            monaco::sys::KeyCode::Enter.to_value() | (monaco::sys::KeyMod::ctrl_cmd() as u32);
+          let keycode = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
           let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
 
-          raw_editor.add_command(keycode.into(), js_closure.as_ref().unchecked_ref(), None);
+          raw_editor.add_command(keycode.into(), (*js_closure).as_ref().unchecked_ref(), None);
         });
-      },
-      text_model,
-    )
-  };
 
-  let on_submit = {
-    // let inputet = stdin.clone();
-    // move |input: String| {
-    //   inputet.set(input);
-    // }
-    |_input: String| {}
-  };
+        false
+      }
+      Msg::CodeChanged => {
+        self.stdout.clear();
+        self.code = self.text_model.get_value();
+        self.interpretator_output = match Program::from_source(&self.code) {
+          Ok(program) => {
+            let reader = BufReader::new(std::io::empty());
+            let mut ram = Ram::new(program, Box::new(reader), Box::new(self.writer.clone()));
+            format!("{:?}", ram.run())
+          }
+          Err(e) => format!("{:?}", e),
+        };
+        true
+      }
+      Msg::WriterWrote(data) => {
+        self.stdout.push_str(&data);
+        self.stdout.push('\n');
+        true
+      }
+    }
+  }
 
-  html! {
+  fn view(&self, _ctx: &Context<Self>) -> Html {
+    let on_editor_created = self.link.callback(Msg::EditorCreated);
+
+    html! {
       <div id="code-wrapper">
-          <div id="code-editor">
-              <CustomEditor {on_editor_created} text_model={(*text_model).clone()} />
+        <div id="code-editor">
+          <CustomEditor {on_editor_created} text_model={self.text_model.clone()} />
+        </div>
+        <OutputComponent output={AttrValue::from(self.stdout.clone())} />
+        <div id="event-log-wrapper">
+          <div id="event-log">
+            <h2>{"Code (press CTRL+Enter / Command+Enter to view)"}</h2>
+            <pre> {self.interpretator_output.clone()} </pre>
           </div>
-          <OutputComponent output={AttrValue::from(stdout.to_string())} />
-          <InputComponent {on_submit} reader={reader.clone()} input={"".to_string()} />
-          <div id="event-log-wrapper">
-              <div id="event-log">
-                  <h2>{"Code (press CTRL+Enter / Command+Enter to view)"}</h2>
-                  <pre> {interpretator_output.to_string()} </pre>
-              </div>
-          </div>
+        </div>
       </div>
+    }
   }
 }
