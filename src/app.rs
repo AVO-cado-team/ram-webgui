@@ -1,27 +1,27 @@
 use crate::code_editor::CustomEditor;
 use crate::io::custom_reader::CustomReader;
 use crate::io::custom_writer::CustomWriter;
-use std::io::BufReader;
+use crate::io::input::InputComponent;
+use crate::io::output::OutputComponent;
+
 use std::rc::Rc;
+
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsCast;
+use yew::html::Scope;
+use yew::prelude::*;
 
 use monaco::sys::KeyCode;
 use monaco::sys::KeyMod;
 use monaco::{api::TextModel, sys::editor::IStandaloneCodeEditor, yew::CodeEditorLink};
 
-use wasm_bindgen::closure::Closure;
-use yew::html::Scope;
-use yew::prelude::*;
-
-use crate::io::output::OutputComponent;
 use ramemu::program::Program;
 use ramemu::ram::Ram;
 
-use wasm_bindgen::JsCast;
-
 const INITIAL_CODE: &str = r#"
-write =3
+read 1
+write 1
 halt
-
 "#;
 
 pub struct App {
@@ -29,16 +29,18 @@ pub struct App {
   text_model: TextModel,
   code: String,
   interpretator_output: String,
+  stdin: String,
   stdout: String,
-  js_closure: Option<Rc<Closure<dyn Fn()>>>,
+  code_runner: Option<Rc<Closure<dyn Fn()>>>,
   reader: CustomReader,
   writer: CustomWriter,
 }
 
 pub enum Msg {
   EditorCreated(CodeEditorLink),
-  CodeChanged,
+  RunCode,
   WriterWrote(String),
+  InputChanged(String),
 }
 
 impl Component for App {
@@ -46,22 +48,16 @@ impl Component for App {
   type Properties = ();
 
   fn create(ctx: &Context<Self>) -> Self {
-    let text_model = TextModel::create(INITIAL_CODE, Some("ram"), None).unwrap();
-    let code = String::from(INITIAL_CODE);
-    let interpretator_output = String::from("");
-    let stdout = String::from("");
-    let reader = CustomReader::new();
-    let writer = CustomWriter::new(ctx.link().callback(Msg::WriterWrote));
-
     Self {
       link: ctx.link().clone(),
-      text_model,
-      code,
-      interpretator_output,
-      stdout,
-      reader,
-      writer,
-      js_closure: None,
+      text_model: TextModel::create(INITIAL_CODE, Some("ram"), None).unwrap(),
+      code: String::from(INITIAL_CODE),
+      interpretator_output: Default::default(),
+      stdin: Default::default(),
+      stdout: Default::default(),
+      reader: CustomReader::new(),
+      writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
+      code_runner: None,
     }
   }
 
@@ -69,28 +65,31 @@ impl Component for App {
     match msg {
       Msg::EditorCreated(editor_link) => {
         let link = self.link.clone();
-        let js_closure = Rc::new(Closure::<dyn Fn()>::new(move || {
-          link.send_message(Msg::CodeChanged);
+        let code_runner = Rc::new(Closure::<dyn Fn()>::new(move || {
+          link.send_message(Msg::RunCode);
         }));
 
-        self.js_closure = Some(js_closure.clone());
+        self.code_runner = Some(code_runner.clone());
 
         editor_link.with_editor(|editor| {
           let keycode = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
           let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
 
-          raw_editor.add_command(keycode.into(), (*js_closure).as_ref().unchecked_ref(), None);
+          raw_editor.add_command(keycode.into(), (*code_runner).as_ref().unchecked_ref(), None);
         });
 
         false
       }
-      Msg::CodeChanged => {
+      Msg::RunCode => {
         self.stdout.clear();
         self.code = self.text_model.get_value();
         self.interpretator_output = match Program::from_source(&self.code) {
           Ok(program) => {
-            let reader = BufReader::new(std::io::empty());
-            let mut ram = Ram::new(program, Box::new(reader), Box::new(self.writer.clone()));
+            let mut ram = Ram::new(
+              program,
+              Box::new(self.reader.clone()),
+              Box::new(self.writer.clone()),
+            );
             format!("{:?}", ram.run())
           }
           Err(e) => format!("{:?}", e),
@@ -100,6 +99,12 @@ impl Component for App {
       Msg::WriterWrote(data) => {
         self.stdout.push_str(&data);
         self.stdout.push('\n');
+        true
+      }
+      Msg::InputChanged(data) => {
+        self.stdin = data;
+        self.stdin.push('\n');
+        self.reader.set_input(self.stdin.clone());
         true
       }
     }
@@ -113,6 +118,7 @@ impl Component for App {
         <div id="code-editor">
           <CustomEditor {on_editor_created} text_model={self.text_model.clone()} />
         </div>
+        <InputComponent on_change={self.link.callback(Msg::InputChanged)} />
         <OutputComponent output={AttrValue::from(self.stdout.clone())} />
         <div id="event-log-wrapper">
           <div id="event-log">

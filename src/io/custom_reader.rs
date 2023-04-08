@@ -1,32 +1,44 @@
-use std::io::{Error, ErrorKind, Read};
+use std::io::{BufRead, Error, ErrorKind, Read};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct CustomReader {
-  input: Option<String>,
+  input: String,
 }
 
 impl CustomReader {
   pub fn new() -> Self {
-    Self { input: None }
+    Self {
+      input: String::new(),
+    }
   }
 
   pub fn set_input(&mut self, input: String) {
-    self.input = Some(input);
+    self.input = input;
   }
 }
 
 impl Read for CustomReader {
   fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-    match self.input.as_ref() {
-      Some(input) => {
-        log::info!("Input: {:?}", input);
-        let bytes = input.as_bytes();
-        let len = std::cmp::min(buf.len(), bytes.len());
-        buf[..len].copy_from_slice(&bytes[..len]);
-        self.input = None;
-        Ok(len)
-      }
-      None => Err(Error::new(ErrorKind::UnexpectedEof, "No input available")),
+    if self.input.is_empty() {
+      //  TODO: wait for input
+      return Err(Error::new(ErrorKind::UnexpectedEof, "No input available"));
     }
+    let len = std::cmp::min(buf.len(), self.input.len());
+    buf[..len].copy_from_slice(&self.input.as_bytes()[..len]);
+    Ok(len)
+  }
+}
+
+impl BufRead for CustomReader {
+  fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+    if self.input.is_empty() {
+      //  TODO: wait for input
+      return Err(Error::new(ErrorKind::UnexpectedEof, "No input available"));
+    }
+    Ok(self.input.as_bytes())
+  }
+
+  fn consume(&mut self, amt: usize) {
+    self.input.drain(..std::cmp::min(amt, self.input.len()));
   }
 }
