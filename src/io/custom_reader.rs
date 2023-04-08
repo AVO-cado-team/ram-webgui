@@ -1,4 +1,5 @@
-use std::io::{BufRead, Error, ErrorKind, Read};
+use std::io::{BufRead, Error, ErrorKind, Read, Result};
+use std::cmp::min;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct CustomReader {
@@ -6,31 +7,36 @@ pub struct CustomReader {
 }
 
 impl CustomReader {
-  pub fn new() -> Self {
-    Self {
-      input: String::new(),
-    }
+  pub fn new(input: String) -> Self {
+    let mut reader = Self::default();
+    reader.set_input(input);
+    reader
   }
 
   pub fn set_input(&mut self, input: String) {
-    self.input = input;
+    // NOTE: there should be '\n' at the end of input
+    self.input = input
+      .lines()
+      .filter(|line| !line.is_empty())
+      .fold(String::new(), |a, b| a + b + "\n");
+    log::info!("CustomReader: input set to {}", self.input);
   }
 }
 
 impl Read for CustomReader {
-  fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+  fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
     if self.input.is_empty() {
       //  TODO: wait for input
       return Err(Error::new(ErrorKind::UnexpectedEof, "No input available"));
     }
-    let len = std::cmp::min(buf.len(), self.input.len());
+    let len = min(buf.len(), self.input.len());
     buf[..len].copy_from_slice(&self.input.as_bytes()[..len]);
     Ok(len)
   }
 }
 
 impl BufRead for CustomReader {
-  fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+  fn fill_buf(&mut self) -> Result<&[u8]> {
     if self.input.is_empty() {
       //  TODO: wait for input
       return Err(Error::new(ErrorKind::UnexpectedEof, "No input available"));
@@ -39,6 +45,6 @@ impl BufRead for CustomReader {
   }
 
   fn consume(&mut self, amt: usize) {
-    self.input.drain(..std::cmp::min(amt, self.input.len()));
+    self.input.drain(..min(amt, self.input.len()));
   }
 }

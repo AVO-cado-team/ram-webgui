@@ -24,6 +24,12 @@ write 1
 halt
 "#;
 
+const INITIAL_STDIN: &str = r#"
+3
+"#;
+
+const RUN_CODE_AT_START: bool = false;
+
 pub struct App {
   link: Scope<Self>,
   text_model: TextModel,
@@ -55,21 +61,32 @@ impl Component for App {
       interpretator_output: Default::default(),
       // stdin: Default::default(),
       stdout: Default::default(),
-      reader: CustomReader::new(),
+      reader: CustomReader::new(INITIAL_STDIN.to_string()),
       writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
       code_runner: None,
+    }
+  }
+
+  fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
+    if first_render && RUN_CODE_AT_START {
+      ctx.link().send_message(Msg::RunCode);
     }
   }
 
   fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
     match msg {
       Msg::EditorCreated(editor_link) => {
+        log::info!("Editor created");
         let link = self.link.clone();
-        let code_runner = Rc::new(Closure::<dyn Fn()>::new(move || {
-          link.send_message(Msg::RunCode);
-        }));
 
-        self.code_runner = Some(code_runner.clone());
+        let code_runner = self
+          .code_runner
+          .get_or_insert_with(|| {
+            Rc::new(Closure::<dyn Fn()>::new(move || {
+              link.send_message(Msg::RunCode);
+            }))
+          })
+          .clone();
 
         editor_link.with_editor(|editor| {
           let keycode = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
@@ -109,7 +126,7 @@ impl Component for App {
         // self.stdin = data;
         // self.stdin.push('\n');
         // self.reader.set_input(self.stdin.clone());
-        self.reader.set_input(data + "\n");
+        self.reader.set_input(data);
         true
       }
     }
@@ -117,13 +134,18 @@ impl Component for App {
 
   fn view(&self, _ctx: &Context<Self>) -> Html {
     let on_editor_created = self.link.callback(Msg::EditorCreated);
+    let on_input_changed = self.link.callback(Msg::InputChanged);
 
     html! {
       <div id="code-wrapper">
         <div id="code-editor">
-          <CustomEditor {on_editor_created} text_model={self.text_model.clone()} />
+          <CustomEditor
+            value={INITIAL_CODE}
+            {on_editor_created}
+            text_model={self.text_model.clone()}
+          />
         </div>
-        <InputComponent on_change={self.link.callback(Msg::InputChanged)} />
+        <InputComponent on_change={on_input_changed} default_value={INITIAL_STDIN} />
         <OutputComponent output={AttrValue::from(self.stdout.clone())} />
         <div id="event-log-wrapper">
           <div id="event-log">
