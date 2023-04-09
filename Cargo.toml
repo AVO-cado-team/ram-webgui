@@ -22,3 +22,8 @@ wasm-bindgen-futures = "0.4.34"
 wasm-logger = "0.2.0"
 log = "0.4.17"
 
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "debuginfo"
+opt-level = 3
