@@ -1,14 +1,9 @@
 use crate::code_editor::CustomEditor;
 use crate::io::custom_reader::CustomReader;
 use crate::io::custom_writer::CustomWriter;
-<<<<<<< Updated upstream
 use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 
-=======
-use std::time::SystemTime;
-use std::io::BufReader;
->>>>>>> Stashed changes
 use std::rc::Rc;
 
 use wasm_bindgen::closure::Closure;
@@ -142,23 +137,6 @@ impl Component for App {
     let on_input_changed = self.link.callback(Msg::InputChanged);
 
     html! {
-<<<<<<< Updated upstream
-      <div id="code-wrapper">
-        <div id="code-editor">
-          <CustomEditor
-            value={INITIAL_CODE}
-            {on_editor_created}
-            text_model={self.text_model.clone()}
-          />
-        </div>
-        <InputComponent on_change={on_input_changed} default_value={INITIAL_STDIN} />
-        <OutputComponent output={AttrValue::from(self.stdout.clone())} />
-        <div id="event-log-wrapper">
-          <div id="event-log">
-            <h2>{"Code (press CTRL+Enter / Command+Enter to view)"}</h2>
-            <pre> {self.interpretator_output.clone()} </pre>
-=======
-
       <div class="root">
         <div id="loader">
             <div class="orbe" style="--index: 0"></div>
@@ -194,7 +172,6 @@ impl Component for App {
                   </div>
                 </div>
             </div>
->>>>>>> Stashed changes
           </div>
           <div class="console-container">
             <div class="console-output">
