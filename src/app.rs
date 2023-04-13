@@ -1,9 +1,14 @@
 use crate::code_editor::CustomEditor;
 use crate::io::custom_reader::CustomReader;
 use crate::io::custom_writer::CustomWriter;
+<<<<<<< Updated upstream
 use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 
+=======
+use std::time::SystemTime;
+use std::io::BufReader;
+>>>>>>> Stashed changes
 use std::rc::Rc;
 
 use wasm_bindgen::closure::Closure;
@@ -137,6 +142,7 @@ impl Component for App {
     let on_input_changed = self.link.callback(Msg::InputChanged);
 
     html! {
+<<<<<<< Updated upstream
       <div id="code-wrapper">
         <div id="code-editor">
           <CustomEditor
@@ -151,9 +157,64 @@ impl Component for App {
           <div id="event-log">
             <h2>{"Code (press CTRL+Enter / Command+Enter to view)"}</h2>
             <pre> {self.interpretator_output.clone()} </pre>
-          </div>
+=======
+
+      <div class="root">
+        <div id="loader">
+            <div class="orbe" style="--index: 0"></div>
+            <div class="orbe" style="--index: 1"></div>
+            <div class="orbe" style="--index: 2"></div>
+            <div class="orbe" style="--index: 3"></div>
+            <div class="orbe" style="--index: 4"></div>
         </div>
+        <section id="ram-web">
+          <header>
+              <div class="logo">
+                  <img src="img/logo_fiit.png" alt="logo" class="logo" />
+              </div>
+              <div class="controls">
+                  <div class="compile-btn"></div>
+                  <div class="pause-btn"></div>
+                  <div class="stop-btn"></div>
+                  <div class="debug-btn"></div>
+              </div>
+              <div class="help">
+                  <a href="./about.html" class="about-us">{"About Us"}</a>
+              </div>
+          </header>
+          <div class="interface">
+            <div class="editor-registers">
+                <div id="container" class="editor-container">
+                  <CustomEditor {on_editor_created} text_model={self.text_model.clone()} />
+                </div>
+                <div class="registers-container">
+                  <div class="register">
+                    <div class="register-num"><p>{"R"}</p></div>
+                    <div class="register-val">{"Value"}</div>
+                  </div>
+                </div>
+            </div>
+>>>>>>> Stashed changes
+          </div>
+          <div class="console-container">
+            <div class="console-output">
+              <span class="console-error-fg console-bold">{"Error: "}</span>
+              <span style="white-space:pre">{"Argument is not valid: Pure argument is not allowed in this context"}</span>
+            </div>
+
+            <div class="console-input">
+              <div class="input-marker">{">>>"}</div>
+              <input type="text" class="input-values" placeholder="123"/>
+            </div>
+          </div> 
+        </section>
+        <script type="text/javascript" src="js/loader.js"></script>
+        <script type="text/javascript" src="js/register.js"></script>
+        <script type="text/javascript" src="js/editor/loader.min.js"></script>
+        <script type="text/javascript" src="js/editor/ide.js"></script>
       </div>
+    
     }
+
   }
 }
