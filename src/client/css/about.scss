@@ -1,0 +1,52 @@
+.about-us-block {
+    width: 50%;
+    text-align: center;
+    margin: auto;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin-top: 2em;
+}
+
+.about-us-block h1 {
+    text-transform: uppercase;
+    font-size: 32px;
+    font-weight: 700;
+    color: #FFF;
+    margin-bottom: 0.5em;
+}
+
+.about-us-block .about-info-block {
+    color: #ccc;
+    background: #282c34;
+    border: 1px solid #72767f5c;
+    padding: 15px;
+}
+
+.about-us-block .authors {
+    margin-top: 1em;
+}
+
+.about-us-block .authors .author {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1em;
+}
+
+.about-us-block .authors .author .author-name {
+    color: #5ab1bd;
+    font-weight: 700;
+}
+
+.about-us-block .avo-block .avo {
+
+    width: 25px;
+    height: 25px;
+
+}
+
+.about-us-block .avo-block p {
+    color: #9e9e9e9d;
+}
