@@ -1,8 +1,9 @@
-let keywords = ["ADD", "SUB", "MUL", "DIV", "JUMP", "JMP", "JZ", "JZERO", "JGZ", "JGTZ", "LOAD", "STORE", "INPUT", "READ", "WRITE", "OUTPUT", "HALT"]
+const keywords = ["ADD", "SUB", "MUL", "DIV", "JUMP", "JMP", "JZ", "JZERO", "JGZ", "JGTZ", "LOAD", "STORE", "INPUT", "READ", "WRITE", "OUTPUT", "HALT"]
 
-function makeTokensProvider() {
+export function makeTokensProvider() {
   return {
     keywords: keywords,
+    ignoreCase: true,
     tokenizer: {
       root: [
         [/@?[a-zA-Z][\w$]*/, {
@@ -11,8 +12,8 @@ function makeTokensProvider() {
             '@default': 'varialbe'
           }
         }],
-        // [/\d+/, 'number'],
-        [/=[\d*]/, 'delimiter'],
+        [/=\d+/, 'number'],
+        [/\d+/, 'number'],
         [/[*]/, 'pointer'],
         [/#.*/, 'comment'],
         [/:/, 'pointer']

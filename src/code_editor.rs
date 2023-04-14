@@ -2,24 +2,26 @@
 
 use monaco::{
   api::{CodeEditorOptions, TextModel},
+  sys::editor::IStandaloneEditorConstructionOptions,
   // sys::editor::BuiltinTheme,
   yew::{CodeEditor, CodeEditorLink},
 };
 use yew::prelude::*;
 
-const KEYWORDS: [&str; 18] = [
-  "ADD", "SUB", "MUL", "MULT", "DIV", "JUMP", "JMP", "JZ", "JZERO", "JGZ", "JGTZ", "LOAD", "STORE",
-  "INPUT", "READ", "WRITE", "OUTPUT", "HALT",
-];
+use crate::monaco_ram::{ID, THEME};
 
-pub fn get_options(value: String) -> CodeEditorOptions {
-  CodeEditorOptions::default()
-    .with_language("ram".to_owned())
-    .with_theme("ram-theme".to_owned())
-    // .with_builtin_theme(BuiltinTheme::VsDark)
+pub fn get_options(value: String) -> IStandaloneEditorConstructionOptions {
+  let options = CodeEditorOptions::default()
+    .with_language(ID.to_owned())
+    .with_theme(THEME.to_owned())
     .with_automatic_layout(true)
     .with_new_dimension(1000, 400)
     .with_value(value)
+    .to_sys_options();
+
+  options.set_font_size(Some(20.0));
+
+  options
 }
 
 #[derive(PartialEq, Properties)]
@@ -42,7 +44,7 @@ pub fn custom_editor(props: &CustomEditorProps) -> Html {
   html! {
     <CodeEditor
       classes={"full-height"}
-      options={get_options(value.to_string()).to_sys_options()}
+      options={get_options(value.to_string())}
       {on_editor_created} model={text_model.clone()}
     />
   }
