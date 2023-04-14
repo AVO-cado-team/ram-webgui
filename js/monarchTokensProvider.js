@@ -1,4 +1,7 @@
-const keywords = ["ADD", "SUB", "MUL", "DIV", "JUMP", "JMP", "JZ", "JZERO", "JGZ", "JGTZ", "LOAD", "STORE", "INPUT", "READ", "WRITE", "OUTPUT", "HALT"]
+const keywords = [
+  "ADD", "SUB", "MUL", "DIV", "JUMP", "JMP", "JZ", "JZERO", "JGZ",
+  "JGTZ", "LOAD", "STORE", "INPUT", "READ", "WRITE", "OUTPUT", "HALT"
+];
 
 export function makeTokensProvider() {
   return {
@@ -20,4 +23,4 @@ export function makeTokensProvider() {
       ]
     }
   }
-}
+};

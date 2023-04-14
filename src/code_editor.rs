@@ -2,7 +2,7 @@
 
 use monaco::{
   api::{CodeEditorOptions, TextModel},
-  sys::editor::IStandaloneEditorConstructionOptions,
+  sys::editor::{IStandaloneEditorConstructionOptions, IEditorOptionsTabCompletion},
   // sys::editor::BuiltinTheme,
   yew::{CodeEditor, CodeEditorLink},
 };
@@ -20,6 +20,8 @@ pub fn get_options(value: String) -> IStandaloneEditorConstructionOptions {
     .to_sys_options();
 
   options.set_font_size(Some(20.0));
+  options.set_tab_completion(Some(IEditorOptionsTabCompletion::On));
+  options.set_font_family(Some("Droid Sans Mono"));
 
   options
 }

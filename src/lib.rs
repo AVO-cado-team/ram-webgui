@@ -1,12 +1,11 @@
 mod app;
 mod code_editor;
-mod error_display;
-mod footer;
+mod header;
+mod about_popup;
 mod io;
 mod memory;
-mod header;
-mod show_content;
 mod monaco_ram;
+mod utils;
 
 use app::App;
 use monaco_ram::register_ram;

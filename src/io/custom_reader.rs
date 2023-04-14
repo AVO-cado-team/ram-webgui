@@ -18,8 +18,6 @@ impl CustomReader {
     self.input = input
       .split_whitespace()
       .fold(String::new(), |a, b| a + b + "\n");
-
-    log::info!("CustomReader: input set to {}", self.input);
   }
 }
 

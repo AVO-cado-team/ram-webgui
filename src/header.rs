@@ -1,6 +1,8 @@
 #![allow(non_camel_case_types)]
 use yew::prelude::*;
 
+use crate::about_popup::AboutPopup;
+
 #[derive(Default, Clone, PartialEq, Properties)]
 pub struct Props {
   pub on_start: Callback<()>,
@@ -21,8 +23,13 @@ pub fn header(props: &Props) -> Html {
   let on_stop = move |_| on_stop.emit(());
   let on_debug = move |_| on_debug.emit(());
 
+  let show_popup = use_state(|| false);
+
   html! {
     <header>
+        if *show_popup {
+          <AboutPopup />
+        }
         <div class="logo">
           <img src="assets/logo_fiit.png" alt="logo" class="logo" />
         </div>
@@ -33,7 +40,13 @@ pub fn header(props: &Props) -> Html {
           <button onclick={on_debug} class="control-btn debug-btn"/>
         </div>
         <div class="help">
-          <a href="./about.html" class="about-us">{"About Us"}</a>
+          <button
+            onclick={move |_| { show_popup.set(!*show_popup) }}
+            href="./about.html"
+            class="about-us control-btn"
+          >
+            {"About Us"}
+          </button>
         </div>
     </header>
   }

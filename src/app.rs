@@ -6,15 +6,18 @@ use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 use crate::io::output::OutputComponentErrors;
 use crate::memory::Memory;
-use crate::show_content::show_content;
+use crate::utils::comment_selected_code;
+use crate::utils::download_code;
 
 use std::rc::Rc;
 
+use ramemu::ram::RamState;
 use ramemu::registers::Registers;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use yew::html::Scope;
 use yew::prelude::*;
+type MonCallbak = Closure<dyn Fn()>;
 
 use monaco::sys::KeyCode;
 use monaco::sys::KeyMod;
@@ -41,7 +44,10 @@ pub struct App {
   code: String,
   // stdin: String,
   stdout: String,
-  code_runner: Option<Rc<Closure<dyn Fn()>>>,
+  editor: Option<CodeEditorLink>,
+  code_runner: Rc<Closure<dyn Fn()>>,
+  code_saver: Rc<Closure<dyn Fn()>>,
+  commenter: Rc<Closure<dyn Fn()>>,
   memory: Registers<i64>,
   error: Option<OutputComponentErrors>,
   reader: CustomReader,
@@ -51,6 +57,8 @@ pub struct App {
 pub enum Msg {
   EditorCreated(CodeEditorLink),
   RunCode,
+  SaveCode,
+  CommentCode,
   WriterWrote(String),
   InputChanged(String),
 }
@@ -60,6 +68,9 @@ impl Component for App {
   type Properties = ();
 
   fn create(ctx: &Context<Self>) -> Self {
+    let link1 = ctx.link().clone();
+    let link2 = ctx.link().clone();
+    let link3 = ctx.link().clone();
     Self {
       link: ctx.link().clone(),
       text_model: TextModel::create(INITIAL_CODE, Some("ram"), None).unwrap(),
@@ -68,16 +79,19 @@ impl Component for App {
       stdout: Default::default(),
       memory: Default::default(),
       error: None,
+      editor: None,
       reader: CustomReader::new(INITIAL_STDIN.to_string()),
       writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
-      code_runner: None,
+
+      code_runner: Rc::new(MonCallbak::new(move || link1.send_message(Msg::RunCode))),
+      code_saver: Rc::new(MonCallbak::new(move || link2.send_message(Msg::SaveCode))),
+      commenter: Rc::new(MonCallbak::new(move || {
+        link3.send_message(Msg::CommentCode)
+      })),
     }
   }
 
   fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
-    // if first_render {
-    //   show_content();
-    // }
     if first_render && RUN_CODE_AT_START {
       ctx.link().send_message(Msg::RunCode);
     }
@@ -86,27 +100,23 @@ impl Component for App {
   fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
     match msg {
       Msg::EditorCreated(editor_link) => {
-        log::info!("Editor created");
-        let link = self.link.clone();
-
-        let code_runner = self
-          .code_runner
-          .get_or_insert_with(|| {
-            Rc::new(Closure::<dyn Fn()>::new(move || {
-              link.send_message(Msg::RunCode);
-            }))
-          })
-          .clone();
+        self.editor = Some(editor_link.clone());
+        let code_runner = self.code_runner.clone();
+        let code_saver = self.code_saver.clone();
+        let commenter = self.commenter.clone();
 
         editor_link.with_editor(|editor| {
-          let keycode = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
-          let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
+          let run_code = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
+          let save_code = KeyCode::KeyS.to_value() | (KeyMod::ctrl_cmd() as u32);
+          let comment_code = KeyCode::UsSlash.to_value() | (KeyMod::ctrl_cmd() as u32);
+          let code_runner = (*code_runner).as_ref().unchecked_ref();
+          let code_saver = (*code_saver).as_ref().unchecked_ref();
+          let commenter = (*commenter).as_ref().unchecked_ref();
 
-          raw_editor.add_command(
-            keycode.into(),
-            (*code_runner).as_ref().unchecked_ref(),
-            None,
-          );
+          let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
+          raw_editor.add_command(run_code.into(), code_runner, None);
+          raw_editor.add_command(save_code.into(), code_saver, None);
+          raw_editor.add_command(comment_code.into(), commenter, None);
         });
 
         false
@@ -121,13 +131,22 @@ impl Component for App {
               Box::new(self.reader.clone()),
               Box::new(self.writer.clone()),
             );
-            self.error = ram
-              .run()
-              .err()
-              .map(OutputComponentErrors::InterpretError);
+            self.error = ram.run().err().map(OutputComponentErrors::InterpretError);
+            let state: RamState = ram.into();
+            self.memory = state.registers;
           }
           Err(e) => self.error = Some(OutputComponentErrors::ParseError(e)),
         };
+        true
+      }
+      Msg::SaveCode => {
+        let _ = download_code(&self.text_model.get_value());
+        false
+      }
+      Msg::CommentCode => {
+        if let Some(editor) = &self.editor {
+          editor.with_editor(|editor| comment_selected_code(editor, &self.text_model));
+        }
         true
       }
       Msg::WriterWrote(data) => {
