@@ -4,6 +4,8 @@ mod error_display;
 mod footer;
 mod io;
 mod memory;
+mod header;
+mod show_content;
 
 use app::App;
 use wasm_bindgen::prelude::*;

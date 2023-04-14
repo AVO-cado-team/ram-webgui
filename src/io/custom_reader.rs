@@ -1,5 +1,5 @@
-use std::io::{BufRead, Error, ErrorKind, Read, Result};
 use std::cmp::min;
+use std::io::{BufRead, Error, ErrorKind, Read, Result};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct CustomReader {
@@ -16,9 +16,9 @@ impl CustomReader {
   pub fn set_input(&mut self, input: String) {
     // NOTE: there should be '\n' at the end of input
     self.input = input
-      .lines()
-      .filter(|line| !line.is_empty())
+      .split_whitespace()
       .fold(String::new(), |a, b| a + b + "\n");
+
     log::info!("CustomReader: input set to {}", self.input);
   }
 }

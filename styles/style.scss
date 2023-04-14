@@ -8,9 +8,18 @@ body {
     font-family: 'Inter', sans-serif;
 }
 
+.control-btn {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
 #ram-web {
     height: 100vh;
-    opacity: 0;
+    opacity: 1;
 }
 
 header {
@@ -42,7 +51,7 @@ a {
 
 .controls {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
     align-items: center;
     width: 15%;
     /* height: 80%; */
@@ -57,6 +66,7 @@ a {
 .help {
     transform: translateX(-1.5em);
 }
+
 .help a {
     margin-right: 1em;
 }
@@ -64,7 +74,7 @@ a {
 .compile-btn {
     width: 15px;
     height: 15px;
-    background: url("../img/start.png") center / 100% no-repeat;
+    background: url("../assets/start.png") center / 100% no-repeat;
 }
 
 .compile-btn:hover {
@@ -74,7 +84,7 @@ a {
 .pause-btn {
     width: 21px;
     height: 17px;
-    background: url("../img/pause.png") center / 100% no-repeat;
+    background: url("../assets/pause.png") center / 100% no-repeat;
 }
 
 .pause-btn:hover {
@@ -84,7 +94,7 @@ a {
 .stop-btn {
     width: 24px;
     height: 23px;
-    background: url("../img/stop.png") center / 100% no-repeat;
+    background: url("../assets/stop.png") center / 100% no-repeat;
 }
 
 .stop-btn:hover {
@@ -94,7 +104,7 @@ a {
 .debug-btn {
     width: 18px;
     height: 18px;
-    background: url("../img/debug.png") center / 100% no-repeat;
+    background: url("../assets/debug.png") center / 100% no-repeat;
 }
 
 .debug-btn:hover {

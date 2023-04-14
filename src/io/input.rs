@@ -26,13 +26,22 @@ pub fn input_component(props: &Props) -> Html {
   };
 
   html! {
-    <>
-      <textarea
-        class="user-input"
+    <div class="console-input">
+      <div class="input-marker">{">>>"}</div>
+      <input
+        type="text"
+        class="input-values"
         placeholder="Enter input"
         oninput={handle_change}
         value={value.to_string()}
       />
-    </>
+
+      // <textarea
+      //   class="input-values"
+      //   placeholder="Enter input"
+      //   oninput={handle_change}
+      //   value={value.to_string()}
+      // />
+    </div>
   }
 }
