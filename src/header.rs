@@ -31,7 +31,9 @@ pub fn header(props: &Props) -> Html {
           <AboutPopup />
         }
         <div class="logo">
-          <img src="assets/logo_fiit.png" alt="logo" class="logo" />
+          <a href="https://www.fiit.stuba.sk/" alt="FIIT">
+            <img src="assets/logo_fiit.png" alt="FIIT logo" class="logo" />
+          </a>
         </div>
         <div class="controls">
           <button onclick={on_start} class="control-btn compile-btn" />
