@@ -1,75 +1,47 @@
 #![allow(non_camel_case_types)]
 
-use std::{cell::RefCell, rc::Rc};
-
-use web_sys::HtmlInputElement;
+use web_sys::HtmlTextAreaElement;
 use yew::prelude::*;
-
-use super::custom_reader::CustomReader;
-
-pub struct InputComponent {
-  on_submit: Callback<String>,
-  input: String,
-  reader: Rc<RefCell<CustomReader>>,
-}
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-  pub on_submit: Callback<String>,
-  pub reader: Rc<RefCell<CustomReader>>,
-  pub input: String,
+  pub on_change: Callback<String>,
+  #[prop_or_default]
+  pub default_value: AttrValue,
 }
 
-impl Component for InputComponent {
-  type Message = Msg;
-  type Properties = Props;
+#[function_component(InputComponent)]
+pub fn input_component(props: &Props) -> Html {
+  let on_change = props.on_change.clone();
+  let value = use_state(|| props.default_value.to_string());
+  let value_cloned = value.clone();
 
-  fn create(ctx: &Context<Self>) -> Self {
-    Self {
-      on_submit: ctx.props().on_submit.clone(),
-      input: ctx.props().input.clone(),
-      reader: ctx.props().reader.clone(),
+  let handle_change = move |event: InputEvent| {
+    if let Some(input) = event.target_dyn_into::<HtmlTextAreaElement>() {
+      value_cloned.set(input.value());
+      on_change.emit(input.value());
+    } else {
+      log::error!("Failed to cast event target to HtmlTextAreaElement");
     }
-  }
+  };
 
-  fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-    match msg {
-      Msg::UpdateInput(input) => {
-        self.input = input;
-        true
-      }
-      Msg::Submit => {
-        let input = std::mem::take(&mut self.input);
-        self.reader.borrow_mut().set_input(input.clone());
-        self.on_submit.emit(input);
-        true
-      }
-    }
-  }
+  html! {
+    <div class="console-input">
+      <div class="input-marker">{">>>"}</div>
+      <input
+        type="text"
+        class="input-values"
+        placeholder="Enter input"
+        oninput={handle_change}
+        value={value.to_string()}
+      />
 
-  fn view(&self, ctx: &Context<Self>) -> Html {
-    let onchange = ctx.link().batch_callback(|e: Event| {
-      Some(Msg::UpdateInput(
-        e.target_dyn_into::<HtmlInputElement>()?.value(),
-      ))
-    });
-    html! {
-      <>
-        <input
-          class="user-input"
-          placeholder="Enter input"
-          value={self.input.clone()}
-          {onchange}
-        />
-        <button onclick={ctx.link().callback(|_| Msg::Submit)}>
-          { "Submit" }
-        </button>
-      </>
-    }
+      // <textarea
+      //   class="input-values"
+      //   placeholder="Enter input"
+      //   oninput={handle_change}
+      //   value={value.to_string()}
+      // />
+    </div>
   }
-}
-
-pub enum Msg {
-  UpdateInput(String),
-  Submit,
 }
