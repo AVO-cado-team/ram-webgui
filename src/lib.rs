@@ -1,7 +1,7 @@
+mod about_popup;
 mod app;
 mod code_editor;
 mod header;
-mod about_popup;
 mod io;
 mod memory;
 mod monaco_ram;

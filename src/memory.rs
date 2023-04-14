@@ -41,6 +41,7 @@ pub fn memory(props: &Props) -> Html {
     })
   };
 
+  // TODO: STYLE THESE COMMENTED BUTTONS
   html! {
       <div class="registers-container">
         // <button onclick={on_previous_click}>{"Previous"}</button>

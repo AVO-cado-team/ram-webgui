@@ -23,7 +23,7 @@ pub fn output_component(props: &Props) -> Html {
   html! {
     <div class="console-output">
       if props.error.is_some() {
-        <span class="console-error-fg console-bold">{"Error: "}</span> 
+        <span class="console-error-fg console-bold">{"Error: "}</span>
       }
       <span style="white-space:pre"> { output } </span>
     </div>

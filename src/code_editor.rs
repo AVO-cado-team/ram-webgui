@@ -2,7 +2,7 @@
 
 use monaco::{
   api::{CodeEditorOptions, TextModel},
-  sys::editor::{IStandaloneEditorConstructionOptions, IEditorOptionsTabCompletion},
+  sys::editor::{IEditorOptionsTabCompletion, IStandaloneEditorConstructionOptions},
   // sys::editor::BuiltinTheme,
   yew::{CodeEditor, CodeEditorLink},
 };
