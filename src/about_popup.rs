@@ -39,7 +39,7 @@ pub fn about_popup(_props: &Props) -> Html {
 
               <div class="avo-block">
                   <a href="https://github.com/AVO-cado-team">
-                    <img src="../assets/github-mark-white.png" alt="avo" class="avo"/>
+                    <img src="assets/github-mark-white.png" alt="avo" class="avo"/>
                   </a>
                   <p>{ "AVO-cado team © 2023" }</p>
               </div>

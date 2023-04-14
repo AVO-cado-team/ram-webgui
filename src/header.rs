@@ -42,7 +42,6 @@ pub fn header(props: &Props) -> Html {
         <div class="help">
           <button
             onclick={move |_| { show_popup.set(!*show_popup) }}
-            href="./about.html"
             class="about-us control-btn"
           >
             {"About Us"}
