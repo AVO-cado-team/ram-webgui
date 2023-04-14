@@ -2,32 +2,37 @@
 
 use monaco::{
   api::{CodeEditorOptions, TextModel},
-  sys::editor::BuiltinTheme,
+  sys::editor::{IEditorOptionsTabCompletion, IStandaloneEditorConstructionOptions},
+  // sys::editor::BuiltinTheme,
   yew::{CodeEditor, CodeEditorLink},
 };
 use yew::prelude::*;
 
-pub fn get_options(value: String) -> CodeEditorOptions {
-  CodeEditorOptions::default()
-    .with_language("ram".to_owned())
-    .with_builtin_theme(BuiltinTheme::VsDark)
+use crate::monaco_ram::{ID, THEME};
+
+pub fn get_options(value: String) -> IStandaloneEditorConstructionOptions {
+  let options = CodeEditorOptions::default()
+    .with_language(ID.to_owned())
+    .with_theme(THEME.to_owned())
     .with_automatic_layout(true)
     .with_new_dimension(1000, 400)
     .with_value(value)
+    .to_sys_options();
+
+  options.set_font_size(Some(20.0));
+  options.set_tab_completion(Some(IEditorOptionsTabCompletion::On));
+  options.set_font_family(Some("Droid Sans Mono"));
+
+  options
 }
 
 #[derive(PartialEq, Properties)]
 pub struct CustomEditorProps {
   pub on_editor_created: Callback<CodeEditorLink>,
   pub text_model: TextModel,
-  pub value: String,
+  pub value: AttrValue,
 }
 
-///
-/// This is really just a helper component, so we can pass in props easier.
-/// It makes it much easier to use, as we can pass in what we need, and it
-/// will only re-render if the props change.
-///
 #[function_component(CustomEditor)]
 pub fn custom_editor(props: &CustomEditorProps) -> Html {
   let CustomEditorProps {
@@ -39,9 +44,9 @@ pub fn custom_editor(props: &CustomEditorProps) -> Html {
   monaco::workers::ensure_environment_set();
 
   html! {
-    <CodeEditor 
+    <CodeEditor
       classes={"full-height"}
-      options={get_options(value.clone()).to_sys_options()}
+      options={get_options(value.to_string())}
       {on_editor_created} model={text_model.clone()}
     />
   }
