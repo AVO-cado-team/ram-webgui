@@ -32,19 +32,19 @@ pub fn header(props: &Props) -> Html {
         }
         <div class="logo">
           <a href="https://www.fiit.stuba.sk/" alt="FIIT">
-            <img src="assets/logo_fiit.png" alt="FIIT logo" class="logo" />
+            <img src="assets/logo_fiit.png" alt="FIIT logo" />
           </a>
         </div>
         <div class="controls">
-          <button onclick={on_start} class="control-btn compile-btn" />
-          <button onclick={on_pause} class="control-btn pause-btn"/>
-          <button onclick={on_stop} class="control-btn stop-btn"/>
-          <button onclick={on_debug} class="control-btn debug-btn"/>
+          <button onclick={on_start} class="control-btn"><div class="compile-btn"/></button>
+          <button onclick={on_pause} class="control-btn"><div class="pause-btn"/></button>
+          <button onclick={on_stop} class="control-btn"><div class="stop-btn"/></button>
+          <button onclick={on_debug} class="control-btn"><div class="debug-btn"/></button>
         </div>
         <div class="help">
           <button
             onclick={move |_| { show_popup.set(!*show_popup) }}
-            class="about-us control-btn"
+            class="about-us"
           >
             {"About Us"}
           </button>
