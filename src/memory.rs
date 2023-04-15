@@ -19,9 +19,13 @@ pub fn memory(props: &Props) -> Html {
     .map(|i| {
       let index = *starting_index + i;
       let value = registers.get(index);
+      let mut class = "register".to_string();
+      if index == 0 {
+        class += " acc"
+      };
       html! {
-        <div class="register" key={index} >
-          <div class="register-num"><p>{format!("R{}", index)}</p></div>
+        <div class={class} key={index} >
+          <div class="register-num"><p>{format!("{}", index)}</p></div>
           <div class="register-val">{value.to_string()}</div>
         </div>
       }
@@ -46,6 +50,10 @@ pub fn memory(props: &Props) -> Html {
       <div class="registers-container">
         // <button onclick={on_previous_click}>{"Previous"}</button>
         // <button onclick={on_next_click}>{"Next"}</button>
+        <div class="register acc">
+          <div class="register-num"><p>{"R"}</p></div>
+          <div class="register-val">{"Value"}</div>
+        </div>
         {register_entries}
       </div>
   }

@@ -4,7 +4,7 @@
 }
 
 html {
-  font-size: 20px;
+  font-size: 16px;
   font-family: Droid Sans Mono, monospace;
 }
 
@@ -16,10 +16,14 @@ body {
   appearance: none;
   background: none;
   border: none;
-  padding: 0;
+  padding: 5px;
   margin: 0;
   cursor: pointer;
-  color: inherit;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 #ram-web {
@@ -34,6 +38,7 @@ header {
   align-items: center;
   background-color: #25292f;
   border-bottom: 1px solid #72767f5c;
+  padding: 0 1em;
 }
 
 a {
@@ -48,11 +53,21 @@ a {
 }
 
 .logo {
-  /* width: 25%; */
-  height: 80%;   
-  margin-left: 1em;
-  margin-top: 0.4%;
+  width: 147px;
+  height: auto;
+  display: inline-block;
+  // background-color: #5ab1bd;
 }
+
+.logo img {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 1em 1em 0.9em 1em;
+}
+
+
 
 .controls {
   display: flex;
@@ -60,11 +75,10 @@ a {
   align-items: center;
   width: 15%;
   /* height: 80%; */
-  padding: 10px;
+  padding: 5px;
   /* margin-left: 1.5em; */
   background-color: #2c3038;
   border-radius: 10px;
-  transform: translateX(-1em);
   border: 2px solid transparent;
 }
 
@@ -73,12 +87,20 @@ a {
 }
 
 .help button.about-us {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 5px;
+  margin: 0;
+  cursor: pointer;
+  color: inherit;
   margin-right: 1em;
   color: white;
   font-size: 1rem;
   padding: 10px 15px;
   font-family: Droid Sans Mono, monospace;
 }
+
 
 .compile-btn {
   width: 15px;
@@ -143,6 +165,10 @@ a {
   height: 100%;
 }
 
+.editor {
+  height: 100%;
+}
+
 .registers-container {
   width: 20%;
   overflow-y: scroll;
@@ -197,7 +223,7 @@ a {
   border-top: 1px solid #72767f5c;
   border-bottom: 1px solid #72767f5c;
   background-color: #282c34;
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-family: Droid Sans Mono, monospace;
 }
 

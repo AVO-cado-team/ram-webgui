@@ -15,11 +15,10 @@ pub fn get_options(value: String) -> IStandaloneEditorConstructionOptions {
     .with_language(ID.to_owned())
     .with_theme(THEME.to_owned())
     .with_automatic_layout(true)
-    .with_new_dimension(1000, 400)
     .with_value(value)
     .to_sys_options();
 
-  options.set_font_size(Some(20.0));
+  options.set_font_size(Some(18.0));
   options.set_tab_completion(Some(IEditorOptionsTabCompletion::On));
   options.set_font_family(Some("Droid Sans Mono"));
 
@@ -45,7 +44,7 @@ pub fn custom_editor(props: &CustomEditorProps) -> Html {
 
   html! {
     <CodeEditor
-      classes={"full-height"}
+      classes={"editor"}
       options={get_options(value.to_string())}
       {on_editor_created} model={text_model.clone()}
     />

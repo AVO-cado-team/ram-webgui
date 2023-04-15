@@ -190,11 +190,11 @@ impl Component for App {
         </div>
 
         <div class="console-container">
-          <InputComponent on_change={on_input_changed} default_value={INITIAL_STDIN} />
           <OutputComponent
             error={self.error.clone()}
             output={AttrValue::from(self.stdout.clone())}
           />
+          <InputComponent on_change={on_input_changed} default_value={INITIAL_STDIN} />
         </div>
 
       </main>
