@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 
-use web_sys::HtmlTextAreaElement;
+use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
 #[derive(Clone, PartialEq, Properties)]
@@ -17,7 +17,7 @@ pub fn input_component(props: &Props) -> Html {
   let value_cloned = value.clone();
 
   let handle_change = move |event: InputEvent| {
-    if let Some(input) = event.target_dyn_into::<HtmlTextAreaElement>() {
+    if let Some(input) = event.target_dyn_into::<HtmlInputElement>() {
       value_cloned.set(input.value());
       on_change.emit(input.value());
     } else {
