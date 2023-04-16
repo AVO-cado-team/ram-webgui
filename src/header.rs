@@ -1,4 +1,7 @@
 #![allow(non_camel_case_types)]
+use js_sys::Function;
+use wasm_bindgen::{prelude::Closure, JsCast};
+use web_sys::{console, window, Node};
 use yew::prelude::*;
 
 use crate::about_popup::AboutPopup;
@@ -25,6 +28,47 @@ pub fn header(props: &Props) -> Html {
 
   let show_popup = use_state(|| false);
 
+  {
+    let show_popup = show_popup.clone();
+    let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+      if !*show_popup {
+        return;
+      }
+      let popup_element = window()
+        .unwrap()
+        .document()
+        .unwrap()
+        .get_element_by_id("about-popup");
+
+      let popup_element = if let Some(popup_element) = popup_element {
+        popup_element
+      } else {
+        return;
+      };
+
+      let about_us_btn = window()
+        .unwrap()
+        .document()
+        .unwrap()
+        .get_element_by_id("about-us-btn")
+        .unwrap();
+
+      let target = event.target().unwrap();
+      if !popup_element.contains(Some(target.unchecked_ref::<Node>()))
+        && !about_us_btn.contains(Some(target.unchecked_ref::<Node>()))
+      {
+        show_popup.set(false);
+      }
+    });
+
+    window()
+      .unwrap()
+      .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+      .unwrap();
+
+    closure.forget();
+  }
+
   html! {
     <header>
         if *show_popup {
@@ -45,6 +89,7 @@ pub fn header(props: &Props) -> Html {
           <button
             onclick={move |_| { show_popup.set(!*show_popup) }}
             class="about-us"
+            id="about-us-btn"
           >
             {"About Us"}
           </button>

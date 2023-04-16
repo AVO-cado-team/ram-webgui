@@ -63,6 +63,27 @@ pub enum Msg {
   InputChanged(String),
 }
 
+fn get_initial_code() -> String {
+  let window = web_sys::window().expect("no global `window` exists");
+  let storage = window
+    .local_storage()
+    .expect("failed to access local storage")
+    .expect("failed to access local storage");
+  storage
+    .get_item("code")
+    .map(|code| code.unwrap_or_else(|| INITIAL_CODE.to_string()))
+    .unwrap_or_else(|_| INITIAL_CODE.to_string())
+}
+
+fn save_code_to_storage(code: &str) {
+  let window = web_sys::window().expect("no global `window` exists");
+  let storage = window
+    .local_storage()
+    .expect("failed to access local storage")
+    .expect("failed to access local storage");
+  storage.set_item("code", code).unwrap();
+}
+
 impl Component for App {
   type Message = Msg;
   type Properties = ();
@@ -73,8 +94,8 @@ impl Component for App {
     let link3 = ctx.link().clone();
     Self {
       link: ctx.link().clone(),
-      text_model: TextModel::create(INITIAL_CODE, Some("ram"), None).unwrap(),
-      code: String::from(INITIAL_CODE),
+      text_model: TextModel::create(get_initial_code().as_str(), Some("ram"), None).unwrap(),
+      code: String::from(get_initial_code().as_str()),
       // stdin: Default::default(),
       stdout: Default::default(),
       memory: Default::default(),
@@ -117,6 +138,8 @@ impl Component for App {
           raw_editor.add_command(run_code.into(), code_runner, None);
           raw_editor.add_command(save_code.into(), code_saver, None);
           raw_editor.add_command(comment_code.into(), commenter, None);
+
+          save_code_to_storage(&self.text_model.get_value());
         });
 
         false
@@ -140,6 +163,8 @@ impl Component for App {
         true
       }
       Msg::SaveCode => {
+        save_code_to_storage(&self.text_model.get_value());
+
         let _ = download_code(&self.text_model.get_value());
         false
       }
@@ -180,7 +205,7 @@ impl Component for App {
           <div class="editor-registers">
               <div id="container" class="editor-container">
                 <CustomEditor
-                  value={INITIAL_CODE}
+                  value={self.code.clone()}
                   {on_editor_created}
                   text_model={self.text_model.clone()}
                 />

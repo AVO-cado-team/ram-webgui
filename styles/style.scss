@@ -48,7 +48,8 @@ a {
   border-bottom: 2px solid transparent;
 }
 
-.controls:hover, a:hover {
+.controls:hover,
+a:hover {
   border-bottom: 2px solid #5ab1bd;
 }
 
@@ -136,6 +137,16 @@ a {
 }
 
 .debug-btn:hover {
+  cursor: pointer;
+}
+
+.diskette-btn {
+  width: 18px;
+  height: 18px;
+  background: url("assets/diskette.png") center / 100% no-repeat;
+}
+
+.diskette-btn:hover {
   cursor: pointer;
 }
 

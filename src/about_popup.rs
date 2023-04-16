@@ -11,7 +11,7 @@ pub fn about_popup(_props: &Props) -> Html {
   let body = document.body().expect("should have a body on document");
 
   let popup = html! {
-    <div class="about-popup">
+    <div class="about-popup" id="about-popup">
         <div class="about-us-block">
             <div class="about-info-block">
               <h1>{ "About project" }</h1>
