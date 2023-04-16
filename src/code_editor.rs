@@ -20,7 +20,6 @@ pub fn get_options(value: String) -> IStandaloneEditorConstructionOptions {
 
   options.set_font_size(Some(16.0));
   options.set_tab_completion(Some(IEditorOptionsTabCompletion::On));
-  options.set_font_family(Some("Droid Sans Mono"));
 
   options
 }
