@@ -1,7 +1,8 @@
 #![allow(non_camel_case_types)]
-use js_sys::Function;
+
+use crate::utils::use_event_listener;
 use wasm_bindgen::{prelude::Closure, JsCast};
-use web_sys::{console, window, Node};
+use web_sys::{window, Node, EventTarget};
 use yew::prelude::*;
 
 use crate::about_popup::AboutPopup;
@@ -16,6 +17,9 @@ pub struct Props {
 
 #[function_component(Header)]
 pub fn header(props: &Props) -> Html {
+  let popup_ref = use_node_ref();
+  let popup_button_ref = use_node_ref();
+
   let on_start = props.on_start.clone();
   let on_pause = props.on_pause.clone();
   let on_stop = props.on_stop.clone();
@@ -26,53 +30,35 @@ pub fn header(props: &Props) -> Html {
   let on_stop = move |_| on_stop.emit(());
   let on_debug = move |_| on_debug.emit(());
 
-  let show_popup = use_state(|| false);
+  let show_popup = use_state_eq(|| false);
 
   {
     let show_popup = show_popup.clone();
-    let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-      if !*show_popup {
-        return;
-      }
-      let popup_element = window()
-        .unwrap()
-        .document()
-        .unwrap()
-        .get_element_by_id("about-popup");
+    let popup_ref = popup_ref.clone();
+    let about_us_btn = popup_button_ref.clone();
+    let popup_ref_d = popup_ref.clone();
+    let about_us_btn_d = popup_button_ref.clone();
 
-      let popup_element = if let Some(popup_element) = popup_element {
-        popup_element
-      } else {
-        return;
-      };
-
-      let about_us_btn = window()
-        .unwrap()
-        .document()
-        .unwrap()
-        .get_element_by_id("about-us-btn")
-        .unwrap();
-
-      let target = event.target().unwrap();
-      if !popup_element.contains(Some(target.unchecked_ref::<Node>()))
-        && !about_us_btn.contains(Some(target.unchecked_ref::<Node>()))
-      {
-        show_popup.set(false);
-      }
-    });
-
-    window()
-      .unwrap()
-      .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-      .unwrap();
-
-    closure.forget();
+    use_event_listener(
+      "click",
+      move |event: web_sys::MouseEvent| {
+        let (popup_element, about_us_btn) = match (popup_ref.get(), about_us_btn.get()) {
+          (Some(popup_element), Some(about_us_btn)) => (popup_element, about_us_btn),
+          _ => return,
+        };
+        let target_host = event.target().unwrap();
+        let target = Some(target_host.unchecked_ref::<Node>());
+        show_popup.set(popup_element.contains(target) || about_us_btn.contains(target));
+      },
+      (popup_ref_d, about_us_btn_d),
+      window().unwrap().into()
+    );
   }
 
   html! {
     <header>
         if *show_popup {
-          <AboutPopup />
+          <AboutPopup popup_ref={popup_ref.clone()}/>
         }
         <div class="logo">
           <a href="https://www.fiit.stuba.sk/" alt="FIIT">
@@ -89,7 +75,7 @@ pub fn header(props: &Props) -> Html {
           <button
             onclick={move |_| { show_popup.set(!*show_popup) }}
             class="about-us"
-            id="about-us-btn"
+            ref={popup_button_ref.clone()}
           >
             {"About Us"}
           </button>

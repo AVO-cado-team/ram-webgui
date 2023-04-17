@@ -8,7 +8,8 @@ use crate::io::output::OutputComponentErrors;
 use crate::memory::Memory;
 use crate::utils::comment_selected_code;
 use crate::utils::download_code;
-
+use crate::utils::get_from_local_storage;
+use crate::utils::save_code_to_storage;
 use std::rc::Rc;
 
 use ramemu::ram::RamState;
@@ -45,9 +46,13 @@ pub struct App {
   // stdin: String,
   stdout: String,
   editor: Option<CodeEditorLink>,
+  editor_ref: NodeRef,
+
   code_runner: Rc<Closure<dyn Fn()>>,
   code_saver: Rc<Closure<dyn Fn()>>,
+  code_saver_local: Rc<Closure<dyn Fn()>>,
   commenter: Rc<Closure<dyn Fn()>>,
+
   memory: Registers<i64>,
   error: Option<OutputComponentErrors>,
   reader: CustomReader,
@@ -57,31 +62,11 @@ pub struct App {
 pub enum Msg {
   EditorCreated(CodeEditorLink),
   RunCode,
-  SaveCode,
+  SaveCodeToStorage,
+  SaveCodeToLocalStorage,
   CommentCode,
   WriterWrote(String),
   InputChanged(String),
-}
-
-fn get_initial_code() -> String {
-  let window = web_sys::window().expect("no global `window` exists");
-  let storage = window
-    .local_storage()
-    .expect("failed to access local storage")
-    .expect("failed to access local storage");
-  storage
-    .get_item("code")
-    .map(|code| code.unwrap_or_else(|| INITIAL_CODE.to_string()))
-    .unwrap_or_else(|_| INITIAL_CODE.to_string())
-}
-
-fn save_code_to_storage(code: &str) {
-  let window = web_sys::window().expect("no global `window` exists");
-  let storage = window
-    .local_storage()
-    .expect("failed to access local storage")
-    .expect("failed to access local storage");
-  storage.set_item("code", code).unwrap();
 }
 
 impl Component for App {
@@ -92,22 +77,33 @@ impl Component for App {
     let link1 = ctx.link().clone();
     let link2 = ctx.link().clone();
     let link3 = ctx.link().clone();
+    let link4 = ctx.link().clone();
+    let editor_ref: NodeRef = Default::default();
+    let code = get_from_local_storage("code");
+    let code_ref = code.as_deref().unwrap_or(INITIAL_CODE);
+
     Self {
       link: ctx.link().clone(),
-      text_model: TextModel::create(get_initial_code().as_str(), Some("ram"), None).unwrap(),
-      code: String::from(get_initial_code().as_str()),
+      text_model: TextModel::create(code_ref, Some("ram"), None)
+        .expect("Failed to create text model"),
+      code: String::from(code_ref),
       // stdin: Default::default(),
       stdout: Default::default(),
       memory: Default::default(),
       error: None,
       editor: None,
+      editor_ref,
       reader: CustomReader::new(INITIAL_STDIN.to_string()),
       writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
-
       code_runner: Rc::new(MonCallbak::new(move || link1.send_message(Msg::RunCode))),
-      code_saver: Rc::new(MonCallbak::new(move || link2.send_message(Msg::SaveCode))),
+      code_saver: Rc::new(MonCallbak::new(move || {
+        link2.send_message(Msg::SaveCodeToStorage)
+      })),
       commenter: Rc::new(MonCallbak::new(move || {
         link3.send_message(Msg::CommentCode)
+      })),
+      code_saver_local: Rc::new(MonCallbak::new(move || {
+        link4.send_message(Msg::SaveCodeToLocalStorage);
       })),
     }
   }
@@ -125,6 +121,17 @@ impl Component for App {
         let code_runner = self.code_runner.clone();
         let code_saver = self.code_saver.clone();
         let commenter = self.commenter.clone();
+        let code_saver_local = self.code_saver_local.clone();
+
+        let editor_ref = self.editor_ref.clone();
+        let link = _ctx.link().clone();
+        log::info!("Editor Created");
+
+        editor_ref
+          .get()
+          .unwrap()
+          .add_event_listener_with_callback("keydown", (*code_saver_local).as_ref().unchecked_ref())
+          .expect("Failed to add event listener");
 
         editor_link.with_editor(|editor| {
           let run_code = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
@@ -133,18 +140,20 @@ impl Component for App {
           let code_runner = (*code_runner).as_ref().unchecked_ref();
           let code_saver = (*code_saver).as_ref().unchecked_ref();
           let commenter = (*commenter).as_ref().unchecked_ref();
+          link.send_message(Msg::SaveCodeToLocalStorage);
 
           let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
           raw_editor.add_command(run_code.into(), code_runner, None);
           raw_editor.add_command(save_code.into(), code_saver, None);
           raw_editor.add_command(comment_code.into(), commenter, None);
 
-          save_code_to_storage(&self.text_model.get_value());
+          save_code_to_storage("code", &self.text_model.get_value());
         });
 
         false
       }
       Msg::RunCode => {
+        log::info!("Run Code");
         self.stdout.clear();
         self.code = self.text_model.get_value();
         match Program::from_source(&self.code) {
@@ -162,10 +171,15 @@ impl Component for App {
         };
         true
       }
-      Msg::SaveCode => {
-        save_code_to_storage(&self.text_model.get_value());
+      Msg::SaveCodeToStorage => {
+        save_code_to_storage("code", &self.text_model.get_value());
 
         let _ = download_code(&self.text_model.get_value());
+        false
+      }
+      Msg::SaveCodeToLocalStorage => {
+        log::info!("Saving");
+        save_code_to_storage("code", &self.text_model.get_value());
         false
       }
       Msg::CommentCode => {
@@ -203,7 +217,7 @@ impl Component for App {
 
         <div class="interface">
           <div class="editor-registers">
-              <div id="container" class="editor-container">
+              <div id="container" class="editor-container" ref={self.editor_ref.clone()}>
                 <CustomEditor
                   value={self.code.clone()}
                   {on_editor_created}

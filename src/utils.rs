@@ -4,8 +4,54 @@ use monaco::sys::editor::{ICodeEditor, IIdentifiedSingleEditOperation, ITextMode
 use monaco::sys::Range;
 use std::cell::RefCell;
 use std::rc::Rc;
-use wasm_bindgen::{closure::Closure, JsCast};
-use web_sys::{Document, HtmlAnchorElement, HtmlElement};
+use wasm_bindgen::{closure::Closure, convert::FromWasmAbi, JsCast};
+use web_sys::{Document, Event, EventTarget, HtmlAnchorElement, HtmlElement};
+use yew::prelude::*;
+
+pub fn get_from_local_storage(key: &str) -> Option<String> {
+  let window = web_sys::window()?;
+  let storage = window.local_storage().ok()??;
+  storage.get_item(key).unwrap_or(None)
+}
+
+pub fn save_code_to_storage(key: &str, value: &str) {
+  let window = web_sys::window().expect("no global `window` exists");
+  let storage = window
+    .local_storage()
+    .expect("failed to access local storage")
+    .expect("failed to access local storage");
+  storage.set_item(key, value).unwrap();
+}
+
+#[hook]
+pub fn use_event_listener<F, T, E>(event: &'static str, handler: F, deps: T, element: EventTarget)
+where
+  F: Fn(E) + 'static,
+  T: PartialEq + 'static,
+  E: JsCast + FromWasmAbi + 'static,
+{
+  log::info!("here");
+  use_effect_with_deps(
+    move |_: &T| {
+      let closure = Closure::wrap(Box::new(move |event: Event| {
+        if let Ok(event) = event.dyn_into::<E>() {
+          handler(event);
+        }
+      }) as Box<dyn FnMut(Event)>);
+
+      element
+        .add_event_listener_with_callback(event, closure.as_ref().unchecked_ref())
+        .expect("Failed to add event listener");
+
+      move || {
+        element
+          .remove_event_listener_with_callback(event, closure.as_ref().unchecked_ref())
+          .expect("Failed to add event listener");
+      }
+    },
+    deps,
+  );
+}
 
 pub fn comment_selected_code(editor: &CodeEditor, model: &TextModel) {
   let ieditor: &ICodeEditor = editor.as_ref();

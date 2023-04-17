@@ -6,6 +6,7 @@ mod io;
 mod memory;
 mod monaco_ram;
 mod utils;
+mod code_runner;
 
 use app::App;
 use monaco_ram::register_ram;
