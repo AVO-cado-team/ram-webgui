@@ -14,7 +14,8 @@ pub fn get_from_local_storage(key: &str) -> Option<String> {
   storage.get_item(key).unwrap_or(None)
 }
 
-pub fn save_code_to_storage(key: &str, value: &str) {
+pub fn save_to_local_storage(key: &str, value: &str) {
+  let len = value.len();
   let window = web_sys::window().expect("no global `window` exists");
   let storage = window
     .local_storage()
@@ -30,7 +31,6 @@ where
   T: PartialEq + 'static,
   E: JsCast + FromWasmAbi + 'static,
 {
-  log::info!("here");
   use_effect_with_deps(
     move |_: &T| {
       let closure = Closure::wrap(Box::new(move |event: Event| {

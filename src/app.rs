@@ -1,31 +1,48 @@
+use std::borrow::BorrowMut;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+
 use crate::code_editor::CustomEditor;
+use crate::code_runner::CodeRunner;
 use crate::header::Header;
-use crate::io::custom_reader::CustomReader;
-use crate::io::custom_writer::CustomWriter;
-use crate::io::input::InputComponent;
-use crate::io::output::OutputComponent;
-use crate::io::output::OutputComponentErrors;
 use crate::memory::Memory;
 use crate::utils::comment_selected_code;
 use crate::utils::download_code;
 use crate::utils::get_from_local_storage;
-use crate::utils::save_code_to_storage;
-use std::rc::Rc;
+use crate::utils::save_to_local_storage;
 
-use ramemu::ram::RamState;
-use ramemu::registers::Registers;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
+use web_sys::window;
 use yew::html::Scope;
 use yew::prelude::*;
-type MonCallbak = Closure<dyn Fn()>;
-
+type JsCallback = Closure<dyn Fn()>;
+use crate::code_runner::Msg as CodeRunnerMsg;
 use monaco::sys::KeyCode;
 use monaco::sys::KeyMod;
 use monaco::{api::TextModel, sys::editor::IStandaloneCodeEditor, yew::CodeEditorLink};
+use ramemu::registers::Registers;
 
-use ramemu::program::Program;
-use ramemu::ram::Ram;
+pub struct App {
+  scope: Scope<Self>,
+  code_runner_scope: Option<Scope<CodeRunner>>,
+  // stdin: String,
+  editor: Option<CodeEditorLink>,
+  editor_ref: NodeRef,
+  text_model: TextModel,
+  memory: Registers<i64>,
+  default_code: String,
+}
+
+pub enum Msg {
+  EditorCreated(CodeEditorLink),
+  SetRunnerScope(Scope<CodeRunner>),
+  SetMemory(Registers<i64>),
+  DownloadCode,
+  SaveCodeToLocalStorage,
+  CommentCode,
+  RunCode,
+}
 
 const INITIAL_CODE: &str = r#"
 read 1
@@ -35,181 +52,119 @@ write 2
 halt
 "#;
 
-const INITIAL_STDIN: &str = r#" 3 4 "#;
-
-const RUN_CODE_AT_START: bool = false;
-
-pub struct App {
-  link: Scope<Self>,
-  text_model: TextModel,
-  code: String,
-  // stdin: String,
-  stdout: String,
-  editor: Option<CodeEditorLink>,
-  editor_ref: NodeRef,
-
-  code_runner: Rc<Closure<dyn Fn()>>,
-  code_saver: Rc<Closure<dyn Fn()>>,
-  code_saver_local: Rc<Closure<dyn Fn()>>,
-  commenter: Rc<Closure<dyn Fn()>>,
-
-  memory: Registers<i64>,
-  error: Option<OutputComponentErrors>,
-  reader: CustomReader,
-  writer: CustomWriter,
-}
-
-pub enum Msg {
-  EditorCreated(CodeEditorLink),
-  RunCode,
-  SaveCodeToStorage,
-  SaveCodeToLocalStorage,
-  CommentCode,
-  WriterWrote(String),
-  InputChanged(String),
-}
+static EDITOR_WAS_CREATED: AtomicBool = AtomicBool::new(false);
 
 impl Component for App {
   type Message = Msg;
   type Properties = ();
 
   fn create(ctx: &Context<Self>) -> Self {
-    let link1 = ctx.link().clone();
-    let link2 = ctx.link().clone();
-    let link3 = ctx.link().clone();
-    let link4 = ctx.link().clone();
     let editor_ref: NodeRef = Default::default();
-    let code = get_from_local_storage("code");
-    let code_ref = code.as_deref().unwrap_or(INITIAL_CODE);
+    let code = get_from_local_storage("code").unwrap_or_else(|| INITIAL_CODE.to_string());
 
     Self {
-      link: ctx.link().clone(),
-      text_model: TextModel::create(code_ref, Some("ram"), None)
-        .expect("Failed to create text model"),
-      code: String::from(code_ref),
+      scope: ctx.link().clone(),
       // stdin: Default::default(),
-      stdout: Default::default(),
       memory: Default::default(),
-      error: None,
       editor: None,
+      code_runner_scope: None,
       editor_ref,
-      reader: CustomReader::new(INITIAL_STDIN.to_string()),
-      writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
-      code_runner: Rc::new(MonCallbak::new(move || link1.send_message(Msg::RunCode))),
-      code_saver: Rc::new(MonCallbak::new(move || {
-        link2.send_message(Msg::SaveCodeToStorage)
-      })),
-      commenter: Rc::new(MonCallbak::new(move || {
-        link3.send_message(Msg::CommentCode)
-      })),
-      code_saver_local: Rc::new(MonCallbak::new(move || {
-        link4.send_message(Msg::SaveCodeToLocalStorage);
-      })),
+      text_model: TextModel::create(code.as_str(), Some("ram"), None)
+        .expect("Failed to create text model"),
+      default_code: code,
     }
   }
 
-  fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
-    if first_render && RUN_CODE_AT_START {
-      ctx.link().send_message(Msg::RunCode);
-    }
-  }
-
-  fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+  fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
     match msg {
       Msg::EditorCreated(editor_link) => {
-        self.editor = Some(editor_link.clone());
-        let code_runner = self.code_runner.clone();
-        let code_saver = self.code_saver.clone();
-        let commenter = self.commenter.clone();
-        let code_saver_local = self.code_saver_local.clone();
+        if EDITOR_WAS_CREATED.fetch_or(true, Ordering::SeqCst) {
+          panic!("Editor was created twice!");
+        }
 
-        let editor_ref = self.editor_ref.clone();
-        let link = _ctx.link().clone();
         log::info!("Editor Created");
+        self.editor = Some(editor_link.clone());
+        let link1 = ctx.link().clone();
+        let link2 = ctx.link().clone();
+        let link3 = ctx.link().clone();
+        let link4 = ctx.link().clone();
 
-        editor_ref
+        let code_runner = JsCallback::new(move || link1.send_message(Msg::DownloadCode));
+        let downloader = JsCallback::new(move || link2.send_message(Msg::CommentCode));
+        let commenter = JsCallback::new(move || link3.send_message(Msg::CommentCode));
+        let code_saver = JsCallback::new(move || {
+          let link = link4.clone();
+          let code_saver_core =
+            JsCallback::new(move || link.send_message(Msg::SaveCodeToLocalStorage));
+          log::info!("Saving!");
+          window()
+            .unwrap()
+            .set_timeout_with_callback_and_timeout_and_arguments_0(
+              code_saver_core.as_ref().unchecked_ref(),
+              50,
+            )
+            .unwrap();
+          code_saver_core.forget();
+        });
+
+        self
+          .editor_ref
           .get()
           .unwrap()
-          .add_event_listener_with_callback("keydown", (*code_saver_local).as_ref().unchecked_ref())
+          .add_event_listener_with_callback("keydown", code_saver.as_ref().unchecked_ref())
           .expect("Failed to add event listener");
 
         editor_link.with_editor(|editor| {
           let run_code = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
           let save_code = KeyCode::KeyS.to_value() | (KeyMod::ctrl_cmd() as u32);
           let comment_code = KeyCode::UsSlash.to_value() | (KeyMod::ctrl_cmd() as u32);
-          let code_runner = (*code_runner).as_ref().unchecked_ref();
-          let code_saver = (*code_saver).as_ref().unchecked_ref();
-          let commenter = (*commenter).as_ref().unchecked_ref();
-          link.send_message(Msg::SaveCodeToLocalStorage);
+          let code_runner = code_runner.as_ref().unchecked_ref();
+          let downloader = downloader.as_ref().unchecked_ref();
+          let commenter = commenter.as_ref().unchecked_ref();
+          ctx.link().send_message(Msg::SaveCodeToLocalStorage);
 
           let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
           raw_editor.add_command(run_code.into(), code_runner, None);
-          raw_editor.add_command(save_code.into(), code_saver, None);
+          raw_editor.add_command(save_code.into(), downloader, None);
           raw_editor.add_command(comment_code.into(), commenter, None);
 
-          save_code_to_storage("code", &self.text_model.get_value());
+          save_to_local_storage("code", &self.text_model.get_value());
         });
 
-        false
+        code_runner.forget();
+        downloader.forget();
+        commenter.forget();
+        code_saver.forget();
       }
-      Msg::RunCode => {
-        log::info!("Run Code");
-        self.stdout.clear();
-        self.code = self.text_model.get_value();
-        match Program::from_source(&self.code) {
-          Ok(program) => {
-            let mut ram = Ram::new(
-              program,
-              Box::new(self.reader.clone()),
-              Box::new(self.writer.clone()),
-            );
-            self.error = ram.run().err().map(OutputComponentErrors::InterpretError);
-            let state: RamState = ram.into();
-            self.memory = state.registers;
-          }
-          Err(e) => self.error = Some(OutputComponentErrors::ParseError(e)),
-        };
-        true
+      Msg::DownloadCode => {
+        download_code(&self.text_model.get_value()).expect("Failed to download code")
       }
-      Msg::SaveCodeToStorage => {
-        save_code_to_storage("code", &self.text_model.get_value());
-
-        let _ = download_code(&self.text_model.get_value());
-        false
-      }
-      Msg::SaveCodeToLocalStorage => {
-        log::info!("Saving");
-        save_code_to_storage("code", &self.text_model.get_value());
-        false
-      }
+      Msg::SaveCodeToLocalStorage => save_to_local_storage("code", &self.text_model.get_value()),
       Msg::CommentCode => {
         if let Some(editor) = &self.editor {
           editor.with_editor(|editor| comment_selected_code(editor, &self.text_model));
         }
-        true
       }
-      Msg::WriterWrote(data) => {
-        self.stdout.push_str(&data);
-        self.stdout.push('\n');
-        true
+      Msg::SetRunnerScope(scope) => self.code_runner_scope = Some(scope),
+      Msg::SetMemory(memory) => {
+        self.memory = memory;
+        return true;
       }
-      Msg::InputChanged(data) => {
-        // self.stdin = data;
-        // self.stdin.push('\n');
-        // self.reader.set_input(self.stdin.clone());
-        self.reader.set_input(data);
-        true
+      Msg::RunCode => {
+        if let Some(s) = &self.code_runner_scope {
+          s.send_message(CodeRunnerMsg::RunCode);
+        }
       }
-    }
+    };
+    false
   }
 
   fn view(&self, _ctx: &Context<Self>) -> Html {
-    let on_editor_created = self.link.callback(Msg::EditorCreated);
-    let on_input_changed = self.link.callback(Msg::InputChanged);
-    let on_start = self.link.callback(|_| Msg::RunCode);
-    let on_pause = self.link.batch_callback(|_| None); // TODO:
-    let on_stop = self.link.batch_callback(|_| None); // TODO:
-    let on_debug = self.link.batch_callback(|_| None); // TODO:
+    let on_editor_created = self.scope.callback(Msg::EditorCreated);
+    let on_start = self.scope.callback(|_| Msg::RunCode);
+    let on_pause = self.scope.batch_callback(|_| None); // TODO:
+    let on_stop = self.scope.batch_callback(|_| None); // TODO:
+    let on_debug = self.scope.batch_callback(|_| None); // TODO:
 
     html! {
       <main id="ram-web">
@@ -219,7 +174,7 @@ impl Component for App {
           <div class="editor-registers">
               <div id="container" class="editor-container" ref={self.editor_ref.clone()}>
                 <CustomEditor
-                  value={self.code.clone()}
+                  value={self.default_code.clone()}
                   {on_editor_created}
                   text_model={self.text_model.clone()}
                 />
@@ -228,13 +183,11 @@ impl Component for App {
           </div>
         </div>
 
-        <div class="console-container">
-          <OutputComponent
-            error={self.error.clone()}
-            output={AttrValue::from(self.stdout.clone())}
-          />
-          <InputComponent on_change={on_input_changed} default_value={INITIAL_STDIN} />
-        </div>
+        <CodeRunner
+          code={self.text_model.get_value().clone()}
+          set_memory={self.scope.callback(Msg::SetMemory)}
+          set_scope={self.scope.callback(Msg::SetRunnerScope)}
+        />
 
       </main>
     }

@@ -35,13 +35,6 @@ pub fn input_component(props: &Props) -> Html {
         oninput={handle_change}
         value={value.to_string()}
       />
-
-      // <textarea
-      //   class="input-values"
-      //   placeholder="Enter input"
-      //   oninput={handle_change}
-      //   value={value.to_string()}
-      // />
     </div>
   }
 }

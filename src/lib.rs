@@ -1,3 +1,5 @@
+#![allow(non_camel_case_types)]
+
 mod about_popup;
 mod app;
 mod code_editor;

@@ -1,5 +1,3 @@
-#![allow(non_camel_case_types)]
-
 use monaco::{
   api::{CodeEditorOptions, TextModel},
   sys::editor::{IEditorOptionsTabCompletion, IStandaloneEditorConstructionOptions},
@@ -31,21 +29,39 @@ pub struct CustomEditorProps {
   pub value: AttrValue,
 }
 
-#[function_component(CustomEditor)]
-pub fn custom_editor(props: &CustomEditorProps) -> Html {
-  let CustomEditorProps {
-    on_editor_created,
-    text_model,
-    value,
-  } = props;
+pub struct CustomEditor {}
 
-  monaco::workers::ensure_environment_set();
+impl Component for CustomEditor {
+  type Message = ();
+  type Properties = CustomEditorProps;
 
-  html! {
-    <CodeEditor
-      classes={"editor"}
-      options={get_options(value.to_string())}
-      {on_editor_created} model={text_model.clone()}
-    />
+  fn create(_ctx: &Context<Self>) -> Self {
+    monaco::workers::ensure_environment_set();
+
+    Self {}
+  }
+
+  fn changed(&mut self, _ctx: &Context<Self>, _old_props: &Self::Properties) -> bool {
+    false
+  }
+
+  fn update(&mut self, _ctx: &Context<Self>, _msg: Self::Message) -> bool {
+    false
+  }
+
+  fn view(&self, ctx: &Context<Self>) -> Html {
+    let CustomEditorProps {
+      on_editor_created,
+      text_model,
+      value,
+    } = ctx.props();
+
+    html! {
+      <CodeEditor
+        classes={"editor"}
+        options={get_options(value.to_string())}
+        {on_editor_created} model={text_model.clone()}
+      />
+    }
   }
 }
