@@ -10,6 +10,12 @@ function e(e,t,...i){return function(e,t){let i;return i=0===t.length?e:e.replac
  * Version: 0.32.1(29a273516805a852aa8edc5e05059f119b13eff0)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
+ *-----------------------------------------------------------------------------*/tz({id:"abap",extensions:[".abap"],aliases:["abap","ABAP"],loader:()=>Promise.resolve().then((function(){return W5}))}),
+/*!-----------------------------------------------------------------------------
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Version: 0.32.1(29a273516805a852aa8edc5e05059f119b13eff0)
+ * Released under the MIT license
+ * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 tz({id:"yaml",extensions:[".yaml",".yml"],aliases:["YAML","yaml","YML","yml"],mimetypes:["application/x-yaml","text/x-yaml"],loader:()=>Promise.resolve().then((function(){return i6}))});
 /*!-----------------------------------------------------------------------------
