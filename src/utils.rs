@@ -34,9 +34,10 @@ where
   use_effect_with_deps(
     move |_: &T| {
       let closure = Closure::wrap(Box::new(move |event: Event| {
-        if let Ok(event) = event.dyn_into::<E>() {
-          handler(event);
-        }
+        let event = event
+          .dyn_into::<E>()
+          .expect("Failed to cast event into closure's argument");
+        handler(event);
       }) as Box<dyn FnMut(Event)>);
 
       element

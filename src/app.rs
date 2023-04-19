@@ -23,9 +23,7 @@ use monaco::{api::TextModel, sys::editor::IStandaloneCodeEditor, yew::CodeEditor
 use ramemu::registers::Registers;
 
 pub struct App {
-  scope: Scope<Self>,
   code_runner_scope: Option<Scope<CodeRunner>>,
-  // stdin: String,
   editor: Option<CodeEditorLink>,
   editor_ref: NodeRef,
   text_model: TextModel,
@@ -57,19 +55,35 @@ impl Component for App {
   type Message = Msg;
   type Properties = ();
 
-  fn create(ctx: &Context<Self>) -> Self {
+  fn create(_ctx: &Context<Self>) -> Self {
     let editor_ref: NodeRef = Default::default();
     let code = get_from_local_storage("code").unwrap_or_else(|| DEFAULT_CODE.to_string());
+    let text_model =
+      TextModel::create(code.as_str(), Some("ram"), None).expect("Failed to create text model");
+
+    {
+      let text_model = text_model.clone();
+      let on_before_unload = Closure::wrap(Box::new(move |_| {
+        save_to_local_storage("code", &text_model.get_value());
+      }) as Box<dyn FnMut(web_sys::Event)>);
+
+      if let Some(window) = window() {
+        window
+          .add_event_listener_with_callback(
+            "beforeunload",
+            on_before_unload.as_ref().unchecked_ref(),
+          )
+          .expect("Failed to add beforeunload event listener");
+      }
+      on_before_unload.forget();
+    }
 
     Self {
-      scope: ctx.link().clone(),
-      // stdin: Default::default(),
       memory: Default::default(),
       editor: None,
       code_runner_scope: None,
       editor_ref,
-      text_model: TextModel::create(code.as_str(), Some("ram"), None)
-        .expect("Failed to create text model"),
+      text_model,
       default_code: code,
     }
   }
@@ -165,12 +179,17 @@ impl Component for App {
     false
   }
 
-  fn view(&self, _ctx: &Context<Self>) -> Html {
-    let on_editor_created = self.scope.callback(Msg::EditorCreated);
-    let on_start = self.scope.callback(|_| Msg::RunCode);
-    let on_pause = self.scope.batch_callback(|_| None); // TODO:
-    let on_stop = self.scope.batch_callback(|_| None); // TODO:
-    let on_debug = self.scope.batch_callback(|_| None); // TODO:
+  fn destroy(&mut self, _ctx: &Context<Self>) {
+    let new_code = self.text_model.get_value() + " MARKER";
+    save_to_local_storage("code", &new_code);
+  }
+
+  fn view(&self, ctx: &Context<Self>) -> Html {
+    let on_editor_created = ctx.link().callback(Msg::EditorCreated);
+    let on_start = ctx.link().callback(|_| Msg::RunCode);
+    let on_pause = ctx.link().batch_callback(|_| None); // TODO:
+    let on_stop = ctx.link().batch_callback(|_| None); // TODO:
+    let on_debug = ctx.link().batch_callback(|_| None); // TODO:
 
     html! {
       <main id="ram-web">
@@ -190,8 +209,8 @@ impl Component for App {
         </div>
 
         <CodeRunner
-          set_memory={self.scope.callback(Msg::SetMemory)}
-          set_scope={self.scope.callback(Msg::SetRunnerScope)}
+          set_memory={ctx.link().callback(Msg::SetMemory)}
+          set_scope={ctx.link().callback(Msg::SetRunnerScope)}
         />
 
       </main>
