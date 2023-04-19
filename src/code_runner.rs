@@ -9,20 +9,18 @@ use ramemu::program::Program;
 use ramemu::ram::Ram;
 use ramemu::ram::RamState;
 use ramemu::registers::Registers;
-// use wasm_bindgen::prelude::Closure;
 use yew::{html::Scope, prelude::*};
 
-const INITIAL_STDIN: &str = r#" 3 4 "#;
+const DEFAULT_STDIN: &str = r#" 3 4 "#;
 
 pub enum Msg {
-  RunCode,
+  RunCode(String),
   WriterWrote(String),
   InputChanged(String),
 }
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-  pub code: AttrValue,
   pub set_memory: Callback<Registers<i64>>,
   pub set_scope: Callback<Scope<CodeRunner>>,
 }
@@ -31,7 +29,6 @@ pub struct CodeRunner {
   error: Option<OutputComponentErrors>,
   default_stdin: String,
   stdout: String,
-  code: String,
   set_memory: Callback<Registers<i64>>,
   reader: CustomReader,
   writer: CustomWriter,
@@ -43,12 +40,11 @@ impl Component for CodeRunner {
 
   fn create(ctx: &Context<Self>) -> Self {
     ctx.props().set_scope.emit(ctx.link().clone());
-    let stdin = get_from_local_storage("stdin").unwrap_or_else(|| INITIAL_STDIN.to_string());
+    let stdin = get_from_local_storage("stdin").unwrap_or_else(|| DEFAULT_STDIN.to_string());
     CodeRunner {
       error: None,
       default_stdin: stdin.clone(),
       stdout: Default::default(),
-      code: ctx.props().code.to_string(),
       set_memory: ctx.props().set_memory.clone(),
       reader: CustomReader::new(stdin),
       writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
@@ -56,9 +52,7 @@ impl Component for CodeRunner {
   }
 
   fn changed(&mut self, ctx: &Context<Self>, old_props: &Self::Properties) -> bool {
-    if ctx.props().code != self.code {
-      self.code = ctx.props().code.to_string();
-    } else if ctx.props().set_memory != self.set_memory {
+    if ctx.props().set_memory != self.set_memory {
       self.set_memory = ctx.props().set_memory.clone();
     } else if ctx.props().set_scope != old_props.set_scope {
       ctx.props().set_scope.emit(ctx.link().clone());
@@ -68,10 +62,10 @@ impl Component for CodeRunner {
 
   fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
     match msg {
-      Msg::RunCode => {
+      Msg::RunCode(code) => {
         log::info!("Run Code");
         self.stdout.clear();
-        match Program::from_source(&self.code) {
+        match Program::from_source(&code) {
           Ok(program) => {
             let mut ram = Ram::new(
               program,
@@ -101,6 +95,7 @@ impl Component for CodeRunner {
 
   fn view(&self, ctx: &Context<Self>) -> Html {
     let on_input_changed = ctx.link().callback(Msg::InputChanged);
+
     html! {
         <div class="console-container">
           <OutputComponent

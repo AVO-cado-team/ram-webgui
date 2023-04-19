@@ -15,7 +15,7 @@ pub fn get_from_local_storage(key: &str) -> Option<String> {
 }
 
 pub fn save_to_local_storage(key: &str, value: &str) {
-  let len = value.len();
+  let _len = value.len();
   let window = web_sys::window().expect("no global `window` exists");
   let storage = window
     .local_storage()

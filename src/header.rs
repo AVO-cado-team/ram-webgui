@@ -1,8 +1,8 @@
 #![allow(non_camel_case_types)]
 
 use crate::utils::use_event_listener;
-use wasm_bindgen::{prelude::Closure, JsCast};
-use web_sys::{window, Node, EventTarget};
+use wasm_bindgen::JsCast;
+use web_sys::{window, Node};
 use yew::prelude::*;
 
 use crate::about_popup::AboutPopup;
@@ -51,7 +51,7 @@ pub fn header(props: &Props) -> Html {
         show_popup.set(popup_element.contains(target) || about_us_btn.contains(target));
       },
       (popup_ref_d, about_us_btn_d),
-      window().unwrap().into()
+      window().unwrap().into(),
     );
   }
 

@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
@@ -39,12 +38,12 @@ pub enum Msg {
   SetRunnerScope(Scope<CodeRunner>),
   SetMemory(Registers<i64>),
   DownloadCode,
-  SaveCodeToLocalStorage,
+  SaveCode,
   CommentCode,
   RunCode,
 }
 
-const INITIAL_CODE: &str = r#"
+const DEFAULT_CODE: &str = r#"
 read 1
 write 1
 read 2
@@ -60,7 +59,7 @@ impl Component for App {
 
   fn create(ctx: &Context<Self>) -> Self {
     let editor_ref: NodeRef = Default::default();
-    let code = get_from_local_storage("code").unwrap_or_else(|| INITIAL_CODE.to_string());
+    let code = get_from_local_storage("code").unwrap_or_else(|| DEFAULT_CODE.to_string());
 
     Self {
       scope: ctx.link().clone(),
@@ -94,9 +93,7 @@ impl Component for App {
         let commenter = JsCallback::new(move || link3.send_message(Msg::CommentCode));
         let code_saver = JsCallback::new(move || {
           let link = link4.clone();
-          let code_saver_core =
-            JsCallback::new(move || link.send_message(Msg::SaveCodeToLocalStorage));
-          log::info!("Saving!");
+          let code_saver_core = JsCallback::new(move || link.send_message(Msg::SaveCode));
           window()
             .unwrap()
             .set_timeout_with_callback_and_timeout_and_arguments_0(
@@ -121,7 +118,7 @@ impl Component for App {
           let code_runner = code_runner.as_ref().unchecked_ref();
           let downloader = downloader.as_ref().unchecked_ref();
           let commenter = commenter.as_ref().unchecked_ref();
-          ctx.link().send_message(Msg::SaveCodeToLocalStorage);
+          ctx.link().send_message(Msg::SaveCode);
 
           let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
           raw_editor.add_command(run_code.into(), code_runner, None);
@@ -131,6 +128,10 @@ impl Component for App {
           save_to_local_storage("code", &self.text_model.get_value());
         });
 
+        // It iis okay to forget these callbacks because editor will not be created twice
+        // so this is not a real memory leak - it will behave like a normal value, and will
+        // be freed when the editor is dropped, becouse it will be the end of the program.
+        // Editor will not be dropped before the end of the program, so it is okay.
         code_runner.forget();
         downloader.forget();
         commenter.forget();
@@ -139,11 +140,16 @@ impl Component for App {
       Msg::DownloadCode => {
         download_code(&self.text_model.get_value()).expect("Failed to download code")
       }
-      Msg::SaveCodeToLocalStorage => save_to_local_storage("code", &self.text_model.get_value()),
+      Msg::SaveCode => {
+        log::info!("Saving!");
+        save_to_local_storage("code", &self.text_model.get_value());
+        return true;
+      }
       Msg::CommentCode => {
         if let Some(editor) = &self.editor {
           editor.with_editor(|editor| comment_selected_code(editor, &self.text_model));
         }
+        return true;
       }
       Msg::SetRunnerScope(scope) => self.code_runner_scope = Some(scope),
       Msg::SetMemory(memory) => {
@@ -152,7 +158,7 @@ impl Component for App {
       }
       Msg::RunCode => {
         if let Some(s) = &self.code_runner_scope {
-          s.send_message(CodeRunnerMsg::RunCode);
+          s.send_message(CodeRunnerMsg::RunCode(self.text_model.get_value()));
         }
       }
     };
@@ -184,7 +190,6 @@ impl Component for App {
         </div>
 
         <CodeRunner
-          code={self.text_model.get_value().clone()}
           set_memory={self.scope.callback(Msg::SetMemory)}
           set_scope={self.scope.callback(Msg::SetRunnerScope)}
         />
