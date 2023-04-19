@@ -213,6 +213,10 @@ function __wbg_adapter_18(arg0, arg1, arg2, arg3) {
     return takeObject(ret);
 }
 
+function __wbg_adapter_21(arg0, arg1, arg2) {
+    wasm._dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h38a11a6ea9c63d5a(arg0, arg1, addHeapObject(arg2));
+}
+
 function makeClosure(arg0, arg1, dtor, f) {
     const state = { a: arg0, b: arg1, cnt: 1, dtor };
     const real = (...args) => {
@@ -234,12 +238,8 @@ function makeClosure(arg0, arg1, dtor, f) {
 
     return real;
 }
-function __wbg_adapter_21(arg0, arg1) {
+function __wbg_adapter_24(arg0, arg1) {
     wasm._dyn_core__ops__function__Fn_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hcffc4ad8374c8c79(arg0, arg1);
-}
-
-function __wbg_adapter_24(arg0, arg1, arg2) {
-    wasm._dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h38a11a6ea9c63d5a(arg0, arg1, addHeapObject(arg2));
 }
 
 let stack_pointer = 128;
@@ -399,6 +399,13 @@ function getImports() {
             wasm.__wbindgen_free(arg0, arg1);
         }
     };
+    imports.wbg.__wbindgen_debug_string = function(arg0, arg1) {
+        const ret = debugString(getObject(arg1));
+        const ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        getInt32Memory0()[arg0 / 4 + 1] = len0;
+        getInt32Memory0()[arg0 / 4 + 0] = ptr0;
+    };
     imports.wbg.__wbg_get_baf4855f9a986186 = function() { return handleError(function (arg0, arg1) {
         const ret = Reflect.get(getObject(arg0), getObject(arg1));
         return addHeapObject(ret);
@@ -448,6 +455,13 @@ function getImports() {
         getInt32Memory0()[arg0 / 4 + 1] = len0;
         getInt32Memory0()[arg0 / 4 + 0] = ptr0;
     }, arguments) };
+    imports.wbg.__wbg_getValue_a9d77c64f4ddb12a = function(arg0, arg1, arg2, arg3) {
+        const ret = getObject(arg1).getValue(takeObject(arg2), arg3 === 0xFFFFFF ? undefined : arg3 !== 0);
+        const ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        getInt32Memory0()[arg0 / 4 + 1] = len0;
+        getInt32Memory0()[arg0 / 4 + 0] = ptr0;
+    };
     imports.wbg.__wbg_setItem_f645824d6eface62 = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
         getObject(arg0).setItem(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
     }, arguments) };
@@ -558,13 +572,6 @@ function getImports() {
         const ret = editor.createModel(getStringFromWasm0(arg0, arg1), arg2 === 0 ? undefined : getStringFromWasm0(arg2, arg3), getObject(arg4));
         return addHeapObject(ret);
     }, arguments) };
-    imports.wbg.__wbg_getValue_a9d77c64f4ddb12a = function(arg0, arg1, arg2, arg3) {
-        const ret = getObject(arg1).getValue(takeObject(arg2), arg3 === 0xFFFFFF ? undefined : arg3 !== 0);
-        const ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        getInt32Memory0()[arg0 / 4 + 1] = len0;
-        getInt32Memory0()[arg0 / 4 + 0] = ptr0;
-    };
     imports.wbg.__wbg_createElement_e2a0e21263eb5416 = function() { return handleError(function (arg0, arg1, arg2) {
         const ret = getObject(arg0).createElement(getStringFromWasm0(arg1, arg2));
         return addHeapObject(ret);
@@ -655,13 +662,6 @@ function getImports() {
         }
         const ret = getObject(arg0).executeEdits(getStringFromWasm0(arg1, arg2), getObject(arg3), v0);
         return ret;
-    };
-    imports.wbg.__wbindgen_debug_string = function(arg0, arg1) {
-        const ret = debugString(getObject(arg1));
-        const ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        getInt32Memory0()[arg0 / 4 + 1] = len0;
-        getInt32Memory0()[arg0 / 4 + 0] = ptr0;
     };
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
@@ -870,23 +870,23 @@ function getImports() {
     imports.wbg.__wbg_removeAttribute_ad7a5bf2eed30373 = function() { return handleError(function (arg0, arg1, arg2) {
         getObject(arg0).removeAttribute(getStringFromWasm0(arg1, arg2));
     }, arguments) };
-    imports.wbg.__wbindgen_closure_wrapper740 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper742 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_18);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper899 = function(arg0, arg1, arg2) {
-        const ret = makeClosure(arg0, arg1, 26, __wbg_adapter_21);
+    imports.wbg.__wbindgen_closure_wrapper890 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_21);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper1106 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_24);
+    imports.wbg.__wbindgen_closure_wrapper908 = function(arg0, arg1, arg2) {
+        const ret = makeClosure(arg0, arg1, 26, __wbg_adapter_24);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper1244 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_24);
+    imports.wbg.__wbindgen_closure_wrapper1250 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_21);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper2002 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper2009 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_29);
         return addHeapObject(ret);
     };
@@ -925,7 +925,7 @@ function initSync(module) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('ram-webgui-f93c6e3414307295_bg.wasm', import.meta.url);
+        input = new URL('ram-webgui-4646097c082e439e_bg.wasm', import.meta.url);
     }
     const imports = getImports();
 
