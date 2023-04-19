@@ -1,7 +1,7 @@
 import { editor, languages, KeyMod, Range } from './snippets/monaco-3640001003124600/js/release/editor.js';
-import { completionItemsProvider } from './snippets/ram-webgui-e733985697d4ed28/js/completionItemProvider.js';
-import { makeTokensProvider } from './snippets/ram-webgui-e733985697d4ed28/js/monarchTokensProvider.js';
-import { loadTheme } from './snippets/ram-webgui-e733985697d4ed28/js/theme.js';
+import { completionItemsProvider } from './snippets/ram-webgui-b4bab2ef45f12d9c/js/completionItemProvider.js';
+import { makeTokensProvider } from './snippets/ram-webgui-b4bab2ef45f12d9c/js/monarchTokensProvider.js';
+import { loadTheme } from './snippets/ram-webgui-b4bab2ef45f12d9c/js/theme.js';
 
 let wasm;
 
@@ -214,7 +214,7 @@ function __wbg_adapter_18(arg0, arg1, arg2, arg3) {
 }
 
 function __wbg_adapter_21(arg0, arg1, arg2) {
-    wasm._dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h38a11a6ea9c63d5a(arg0, arg1, addHeapObject(arg2));
+    wasm._dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h9af6b17968695e49(arg0, arg1, addHeapObject(arg2));
 }
 
 function makeClosure(arg0, arg1, dtor, f) {
@@ -239,7 +239,7 @@ function makeClosure(arg0, arg1, dtor, f) {
     return real;
 }
 function __wbg_adapter_24(arg0, arg1) {
-    wasm._dyn_core__ops__function__Fn_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hcffc4ad8374c8c79(arg0, arg1);
+    wasm._dyn_core__ops__function__Fn_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__ha5091e3f5bdcc919(arg0, arg1);
 }
 
 let stack_pointer = 128;
@@ -342,7 +342,7 @@ function getImports() {
     imports.wbg.__wbg_register_e76a4f243793f65f = function(arg0) {
         languages.register(getObject(arg0));
     };
-    imports.wbg.__wbg_makeTokensProvider_d26940e7c05baf75 = function() {
+    imports.wbg.__wbg_makeTokensProvider_4442e0be8f5a61c9 = function() {
         const ret = makeTokensProvider();
         return addHeapObject(ret);
     };
@@ -350,14 +350,14 @@ function getImports() {
         const ret = languages.setMonarchTokensProvider(getStringFromWasm0(arg0, arg1), getObject(arg2));
         return addHeapObject(ret);
     };
-    imports.wbg.__wbg_loadTheme_be3d00cabb992637 = function() {
+    imports.wbg.__wbg_loadTheme_b7d68b465606c239 = function() {
         const ret = loadTheme();
         return addHeapObject(ret);
     };
     imports.wbg.__wbg_defineTheme_d4b8049c2adc66ae = function() { return handleError(function (arg0, arg1, arg2) {
         editor.defineTheme(getStringFromWasm0(arg0, arg1), getObject(arg2));
     }, arguments) };
-    imports.wbg.__wbg_completionItemsProvider_337218c2a13d56e0 = function() {
+    imports.wbg.__wbg_completionItemsProvider_747ce5e582409ce5 = function() {
         const ret = completionItemsProvider();
         return addHeapObject(ret);
     };
@@ -874,11 +874,11 @@ function getImports() {
         const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_18);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper890 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper889 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_21);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper908 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper907 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 26, __wbg_adapter_24);
         return addHeapObject(ret);
     };
@@ -925,7 +925,7 @@ function initSync(module) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('ram-webgui-4646097c082e439e_bg.wasm', import.meta.url);
+        input = new URL('ram-webgui-4186eca422bf71ef_bg.wasm', import.meta.url);
     }
     const imports = getImports();
 
