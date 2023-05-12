@@ -1,5 +1,3 @@
-#![allow(non_camel_case_types)]
-
 use monaco::{
   api::{CodeEditorOptions, TextModel},
   sys::editor::{IEditorOptionsTabCompletion, IStandaloneEditorConstructionOptions},
@@ -15,13 +13,11 @@ pub fn get_options(value: String) -> IStandaloneEditorConstructionOptions {
     .with_language(ID.to_owned())
     .with_theme(THEME.to_owned())
     .with_automatic_layout(true)
-    .with_new_dimension(1000, 400)
     .with_value(value)
     .to_sys_options();
 
-  options.set_font_size(Some(20.0));
+  options.set_font_size(Some(16.0));
   options.set_tab_completion(Some(IEditorOptionsTabCompletion::On));
-  options.set_font_family(Some("Droid Sans Mono"));
 
   options
 }
@@ -33,21 +29,39 @@ pub struct CustomEditorProps {
   pub value: AttrValue,
 }
 
-#[function_component(CustomEditor)]
-pub fn custom_editor(props: &CustomEditorProps) -> Html {
-  let CustomEditorProps {
-    on_editor_created,
-    text_model,
-    value,
-  } = props;
+pub struct CustomEditor {}
 
-  monaco::workers::ensure_environment_set();
+impl Component for CustomEditor {
+  type Message = ();
+  type Properties = CustomEditorProps;
 
-  html! {
-    <CodeEditor
-      classes={"full-height"}
-      options={get_options(value.to_string())}
-      {on_editor_created} model={text_model.clone()}
-    />
+  fn create(_ctx: &Context<Self>) -> Self {
+    monaco::workers::ensure_environment_set();
+
+    Self {}
+  }
+
+  fn changed(&mut self, _ctx: &Context<Self>, _old_props: &Self::Properties) -> bool {
+    false
+  }
+
+  fn update(&mut self, _ctx: &Context<Self>, _msg: Self::Message) -> bool {
+    false
+  }
+
+  fn view(&self, ctx: &Context<Self>) -> Html {
+    let CustomEditorProps {
+      on_editor_created,
+      text_model,
+      value,
+    } = ctx.props();
+
+    html! {
+      <CodeEditor
+        classes={"editor"}
+        options={get_options(value.to_string())}
+        {on_editor_created} model={text_model.clone()}
+      />
+    }
   }
 }

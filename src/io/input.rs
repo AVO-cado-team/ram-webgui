@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 
-use web_sys::HtmlTextAreaElement;
+use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
 #[derive(Clone, PartialEq, Properties)]
@@ -17,12 +17,12 @@ pub fn input_component(props: &Props) -> Html {
   let value_cloned = value.clone();
 
   let handle_change = move |event: InputEvent| {
-    if let Some(input) = event.target_dyn_into::<HtmlTextAreaElement>() {
-      value_cloned.set(input.value());
-      on_change.emit(input.value());
-    } else {
-      log::error!("Failed to cast event target to HtmlTextAreaElement");
-    }
+    // It could be an If let, but I prefer to panic here
+    let input = event
+      .target_dyn_into::<HtmlInputElement>()
+      .expect("Failed to cast event target to HtmlTextAreaElement");
+    value_cloned.set(input.value());
+    on_change.emit(input.value());
   };
 
   html! {
@@ -35,13 +35,6 @@ pub fn input_component(props: &Props) -> Html {
         oninput={handle_change}
         value={value.to_string()}
       />
-
-      // <textarea
-      //   class="input-values"
-      //   placeholder="Enter input"
-      //   oninput={handle_change}
-      //   value={value.to_string()}
-      // />
     </div>
   }
 }

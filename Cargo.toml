@@ -1,6 +1,6 @@
 [package]
 name = "ram-webgui"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Webgui for ramemu"
 readme = "README.md"
@@ -16,8 +16,8 @@ js-sys = "0.3.61"
 web-sys = { version = "0.3.61", features = ['Document', 'Window', 'Element', 'HtmlElement', 'Node', 'CssStyleDeclaration', 'HtmlAnchorElement'] }
 
 monaco = { git = "https://github.com/siku2/rust-monaco/", rev = "794a4cc7819f9ed7eb06559e24f75a41e23cf22a", features = ["yew", "yew-components"] }
-# ramemu = { git = "https://github.com/AVO-cado-team/ramemu.git", tag = "0.1.4", features = ["wasm"]}
-ramemu = { git = "https://github.com/AVO-cado-team/ramemu.git", rev = "f7a8bc67e49770a57a648faea8904ed2b0c58ca6", features = ["wasm"]}
+# ramemu = { git = "https://github.com/AVO-cado-team/ramemu.git", tag = "0.1.5", features = ["wasm"]}
+ramemu = { git = "https://github.com/AVO-cado-team/ramemu.git", tag = "0.1.6", features = ["wasm"]}
 wasm-bindgen-futures = "0.4.34"
 # futures = "0.3.28"
 wasm-logger = "0.2.0"
