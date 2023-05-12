@@ -15,7 +15,7 @@ use monaco_ram::register_ram;
 use wasm_bindgen::prelude::*;
 
 pub fn run_app() -> Result<(), JsValue> {
-  register_ram();
-  yew::Renderer::<App>::new().render();
-  Ok(())
+    register_ram();
+    yew::Renderer::<App>::new().render();
+    Ok(())
 }
