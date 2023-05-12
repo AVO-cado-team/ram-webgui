@@ -1,7 +1,7 @@
 use js_sys::{Array, Object};
 use monaco::api::{CodeEditor, TextModel};
-use monaco::sys::editor::{ICodeEditor, IIdentifiedSingleEditOperation, ITextModel};
-use monaco::sys::Range;
+use monaco::sys::editor::{ICodeEditor, IEditor, IIdentifiedSingleEditOperation, ITextModel};
+use monaco::sys::{IPosition, Position, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::{closure::Closure, convert::FromWasmAbi, JsCast};
@@ -54,33 +54,72 @@ where
   );
 }
 
-pub fn comment_selected_code(editor: &CodeEditor, model: &TextModel) {
+fn get_selection_or_cursor_range(ieditor: &ICodeEditor) -> Option<Range> {
+  let selection = ieditor.get_selection()?;
+
+  let start_line = selection.start_line_number();
+  let end_line = selection.end_line_number();
+  let start_column = selection.start_column();
+  let end_column = selection.end_column();
+
+  if start_line == end_line && start_column == end_column {
+    // Treat as cursor position, not selection
+    let cursor_line = ieditor.get_position()?.line_number();
+    let max_column = ieditor.get_model()?.get_line_max_column(cursor_line);
+    Some(Range::new(cursor_line, 0., cursor_line, max_column))
+  } else {
+    // Handle normal selection
+    Some(Range::new(start_line, start_column, end_line, end_column))
+  }
+}
+
+fn prepare_new_text(lines: Vec<&str>) -> (String, bool) {
+  let (toggler, do_comment): (Box<dyn Fn(&str) -> String>, bool) =
+    if lines.iter().all(|l| l.starts_with('#')) {
+      (Box::new(|line: &str| String::from(&line[1..])), false)
+    } else {
+      (Box::new(|line: &str| format!("#{}", line)), true)
+    };
+
+  let new_text = lines
+    .into_iter()
+    .map(|line| toggler(line))
+    .collect::<Vec<String>>()
+    .join("\n");
+  (new_text, do_comment)
+}
+
+pub fn comment_code(editor: &CodeEditor, model: &TextModel) {
   let ieditor: &ICodeEditor = editor.as_ref();
-  if let Some(selection) = ieditor.get_selection() {
-    let range = Range::new(
-      selection.start_line_number(),
-      selection.start_column(),
-      selection.end_line_number(),
-      selection.end_column(),
-    );
+  let range = match get_selection_or_cursor_range(ieditor) {
+    Some(r) => r,
+    None => return,
+  };
 
-    let itext_model: &ITextModel = model.as_ref();
-    let text = itext_model.get_value_in_range(&range.clone().unchecked_into(), None);
+  let itext_model: &ITextModel = model.as_ref();
+  let text = itext_model.get_value_in_range(&range.clone().unchecked_into(), None);
+  let lines: Vec<&str> = text.lines().collect();
+  let (new_text, do_comment) = prepare_new_text(lines);
 
-    let lines: Vec<&str> = text.lines().collect();
-    let comment = lines
-      .iter()
-      .map(|line| format!("#{}", line))
-      .collect::<Vec<String>>()
-      .join("\n");
+  let edits = Array::new();
+  let edit = Object::new().unchecked_into::<IIdentifiedSingleEditOperation>();
+  edit.set_range(&range);
+  edit.set_text(Some(&new_text));
+  edits.push(&edit);
 
-    let edits = Array::new();
-    let edit = Object::new().unchecked_into::<IIdentifiedSingleEditOperation>();
-    edit.set_range(&range);
-    edit.set_text(Some(&comment));
-    edits.push(&edit);
+  let line_number = range.start_line_number();
+  let column = ieditor.get_position().unwrap().column();
 
-    ieditor.execute_edits("comment", &edits, None);
+  ieditor.execute_edits("comment", &edits, None);
+
+  // Clear the selection after single line comment
+  if range.start_line_number() == range.end_line_number() {
+    let ieditor: &IEditor = editor.as_ref();
+    let column = column + if do_comment { 1.0 } else { -1.0 };
+    let column = column.max(1.0);
+    let new_position = Position::new(line_number, column);
+    let iposition = <Position as AsRef<Position>>::as_ref(&new_position);
+    ieditor.set_position(iposition.unchecked_ref());
   }
 }
 

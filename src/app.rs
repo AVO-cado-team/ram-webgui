@@ -5,10 +5,22 @@ use crate::code_editor::CustomEditor;
 use crate::code_runner::CodeRunner;
 use crate::header::Header;
 use crate::memory::Memory;
-use crate::utils::comment_selected_code;
+use crate::utils::comment_code;
 use crate::utils::download_code;
 use crate::utils::get_from_local_storage;
 use crate::utils::save_to_local_storage;
+  // // Move the cursor or clear the selection after editing
+  // let ieditor: &IEditor = editor.as_ref();
+  // if range.start_line_number() == range.end_line_number() {
+  //   // Single line comment
+  //   let column = ieditor.get_position().unwrap().column();
+  //   let column = column + if new_text.starts_with('#') { 1.0 } else { -1.0 };
+  //   let column = column.max(1.0);
+  //   let new_position = Position::new(range.start_line_number(), column);
+  //   ieditor.set_position(<Position as AsRef<Position>>::as_ref(&new_position).unchecked_ref())
+  //   // ieditor.set_position(new_position.as_ref().unchecked_ref());
+  // }
+  // // No need to clear the selection if it's a multiline comment
 
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
@@ -161,7 +173,7 @@ impl Component for App {
       }
       Msg::CommentCode => {
         if let Some(editor) = &self.editor {
-          editor.with_editor(|editor| comment_selected_code(editor, &self.text_model));
+          editor.with_editor(|editor| comment_code(editor, &self.text_model));
         }
         return true;
       }
