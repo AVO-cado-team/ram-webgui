@@ -9,23 +9,35 @@ license = "GPL3"
 keywords = ["yew", "trunk"]
 categories = ["gui", "wasm", "web-programming"]
 
-[dependencies]
-yew = { version = "0.20", features = ["csr"] }
-wasm-bindgen = "0.2.84"
-js-sys = "0.3.61"
-web-sys = { version = "0.3.61", features = ['Document', 'Window', 'Element', 'HtmlElement', 'Node', 'CssStyleDeclaration', 'HtmlAnchorElement'] }
-
-monaco = { git = "https://github.com/siku2/rust-monaco/", rev = "794a4cc7819f9ed7eb06559e24f75a41e23cf22a", features = ["yew", "yew-components"] }
-# ramemu = { git = "https://github.com/AVO-cado-team/ramemu.git", tag = "0.1.5", features = ["wasm"]}
-ramemu = { git = "https://github.com/AVO-cado-team/ramemu.git", tag = "0.1.6", features = ["wasm"]}
-wasm-bindgen-futures = "0.4.34"
-# futures = "0.3.28"
-wasm-logger = "0.2.0"
-log = "0.4.17"
-urlencoding = "2.1.2"
-
 [profile.release]
 lto = true
 codegen-units = 1
 strip = "debuginfo"
 opt-level = 3
+
+[dependencies]
+# yew = { git = "https://github.com/yewstack/yew.git", features = ["csr"] }
+# yewdux = { git = "https://github.com/intendednull/yewdux.git" }
+
+yew = { version = "0.20", features = ["csr"] }
+yewdux = "0.9"
+wasm-bindgen = "0.2.84"
+js-sys = "0.3.61"
+wasm-bindgen-futures = "0.4.34"
+wasm-logger = "0.2.0"
+log = "0.4.17"
+urlencoding = "2.1.2"
+
+[dependencies.web-sys]
+version = "0.3.61"
+features = ['Document', 'Window', 'Element', 'HtmlElement', 'Node', 'CssStyleDeclaration', 'HtmlAnchorElement']
+
+[dependencies.monaco]
+git = "https://github.com/siku2/rust-monaco/"
+rev = "794a4cc7819f9ed7eb06559e24f75a41e23cf22a"
+features = ["yew", "yew-components"]
+
+[dependencies.ramemu]
+git = "https://github.com/AVO-cado-team/ramemu.git"
+tag = "0.1.6"
+features = ["wasm"]

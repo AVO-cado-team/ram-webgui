@@ -1,5 +1,3 @@
-#![allow(non_camel_case_types)]
-
 use crate::utils::use_event_listener;
 use wasm_bindgen::JsCast;
 use web_sys::{window, Node};
@@ -9,8 +7,8 @@ use crate::about_popup::AboutPopup;
 
 #[derive(Default, Clone, PartialEq, Properties)]
 pub struct Props {
-    pub on_start: Callback<()>,
-    pub on_pause: Callback<()>,
+    pub on_run: Callback<()>,
+    pub on_step: Callback<()>,
     pub on_stop: Callback<()>,
     pub on_debug: Callback<()>,
 }
@@ -20,13 +18,14 @@ pub fn header(props: &Props) -> Html {
     let popup_ref = use_node_ref();
     let popup_button_ref = use_node_ref();
 
-    let on_start = props.on_start.clone();
-    let on_pause = props.on_pause.clone();
+    let on_start = props.on_run.clone();
+    //  TODO: Replace to step
+    let on_step = props.on_step.clone();
     let on_stop = props.on_stop.clone();
     let on_debug = props.on_debug.clone();
 
     let on_start = move |_| on_start.emit(());
-    let on_pause = move |_| on_pause.emit(());
+    let on_step = move |_| on_step.emit(());
     let on_stop = move |_| on_stop.emit(());
     let on_debug = move |_| on_debug.emit(());
 
@@ -67,7 +66,7 @@ pub fn header(props: &Props) -> Html {
           </div>
           <div class="controls">
             <button onclick={on_start} class="control-btn"><div class="compile-btn"/></button>
-            <button onclick={on_pause} class="control-btn"><div class="pause-btn"/></button>
+            <button onclick={on_step} class="control-btn"><div class="pause-btn"/></button>
             <button onclick={on_stop} class="control-btn"><div class="stop-btn"/></button>
             <button onclick={on_debug} class="control-btn"><div class="debug-btn"/></button>
           </div>

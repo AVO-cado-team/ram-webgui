@@ -1,4 +1,3 @@
-// src/about_popup.rs
 use yew::prelude::*;
 
 #[derive(Clone, PartialEq, Properties)]

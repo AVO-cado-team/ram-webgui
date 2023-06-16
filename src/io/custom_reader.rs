@@ -14,7 +14,7 @@ impl CustomReader {
     }
 
     pub fn set_input(&mut self, input: String) {
-        // NOTE: there should be '\n' at the end of input
+        // NOTE: there should be '\n' at the end of input, so be aware of that behavior
         self.input = input
             .split_whitespace()
             .fold(String::new(), |a, b| a + b + "\n");

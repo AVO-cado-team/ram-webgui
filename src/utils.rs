@@ -19,9 +19,12 @@ pub fn save_to_local_storage(key: &str, value: &str) {
     let window = web_sys::window().expect("no global `window` exists");
     let storage = window
         .local_storage()
-        .expect("failed to access local storage")
         .expect("failed to access local storage");
-    storage.set_item(key, value).unwrap();
+    if let Some(storage) = storage {
+        storage
+            .set_item(key, value)
+            .expect("failed to write to local storage");
+    }
 }
 
 #[hook]
@@ -110,7 +113,7 @@ pub fn comment_code(editor: &CodeEditor, model: &TextModel) -> Result<(), ()> {
     ieditor.execute_edits("comment", &edits, None);
 
     // Clear the selection after single line comment
-    if range.start_line_number() == range.end_line_number() {
+    if range.start_line_number() == range.end_line_number() && range.start_column() == 0.0 {
         let ieditor: &IEditor = editor.as_ref();
         let column = column + if do_comment { 1.0 } else { -1.0 };
         let column = column.max(1.0);
