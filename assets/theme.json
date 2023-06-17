@@ -1,5 +1,4 @@
-export const loadTheme = () => {
-  return {
+{
     "base": "vs-dark",
     "inherit": true,
     "rules": [{
@@ -580,5 +579,4 @@ export const loadTheme = () => {
       "titleBar.inactiveBackground": "#282C34",
       "titleBar.inactiveForeground": "#6B717D"
     }
-  }
 }
