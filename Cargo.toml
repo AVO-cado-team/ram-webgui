@@ -1,13 +1,25 @@
 [package]
 name = "ram-webgui"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "Webgui for ramemu"
 readme = "README.md"
-repository = "https://github.com/AVO-cado-team/ramemu"
+repository = "https://github.com/AVO-cado-team/ram-webgui"
 license = "GPL3"
-keywords = ["yew", "trunk"]
+keywords = ["yew", "trunk", "ram"]
 categories = ["gui", "wasm", "web-programming"]
+default-run = "ram-webgui"
+
+[[bin]]
+name = "ram-webgui"
+path = "src/main.rs"
+
+[[bin]]
+name = "hydrated"
+path = "src/bin/hydrated.rs"
+
+[features]
+ssr = ["yew/ssr", "yew/hydration", "futures"]
 
 [profile.release]
 lto = true
@@ -16,16 +28,14 @@ strip = "debuginfo"
 opt-level = 3
 
 [dependencies]
-yew = { version = "0.20", features = ["csr", "hydration", "ssr"] }
-yewdux = "0.9"
+yew = { version = "0.20", features = ["csr"] }
 wasm-bindgen = "0.2.84"
 js-sys = "0.3.61"
 wasm-logger = "0.2.0"
 log = "0.4.17"
 urlencoding = "2.1.2"
-futures = "0.3.28"
-wasm-bindgen-futures = "0.4.34"
 console_error_panic_hook = "0.1.7"
+futures = { version = "0.3.28", optional = true }
 
 [dependencies.web-sys]
 version = "0.3.61"

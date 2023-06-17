@@ -17,10 +17,13 @@ use wasm_bindgen::prelude::*;
 
 pub fn run_app() -> Result<(), JsValue> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-
     wasm_logger::init(wasm_logger::Config::default());
-    // idk hydration is slower
-    // yew::Renderer::<App>::new().hydrate();
+
+    #[cfg(not(feature = "ssr"))]
     yew::Renderer::<App>::new().render();
+
+    #[cfg(feature = "ssr")]
+    yew::Renderer::<App>::new().hydrate();
+
     Ok(())
 }
