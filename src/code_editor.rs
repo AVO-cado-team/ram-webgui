@@ -6,6 +6,14 @@ use wasm_bindgen::JsCast;
 
 use web_sys::window;
 
+const DEFAULT_CODE: &str = r#"
+read 1
+write 1
+read 2
+write 2
+halt
+"#;
+
 use monaco::{
     api::{CodeEditorOptions, TextModel},
     sys::editor::ICodeEditor,
@@ -17,9 +25,11 @@ use monaco::{
 };
 use yew::prelude::*;
 
+use crate::monaco_ram::register_ram;
 use crate::monaco_ram::{LANG_ID, THEME};
 use crate::utils::comment_code;
 use crate::utils::download_code;
+use crate::utils::get_from_local_storage;
 use crate::utils::save_to_local_storage;
 
 type JsCallback = Closure<dyn Fn()>;
@@ -42,10 +52,9 @@ pub fn get_editor_options(read_only: bool) -> IStandaloneEditorConstructionOptio
 
 #[derive(PartialEq, Properties)]
 pub struct Props {
-    pub text_model: TextModel,
-    pub value: AttrValue,
     pub run_code: Callback<()>,
     pub read_only: bool,
+    pub set_text_model: Callback<TextModel>,
 }
 
 pub enum Msg {
@@ -58,14 +67,17 @@ pub enum Msg {
 pub struct CustomEditor {
     editor: Option<CodeEditorLink>,
     editor_ref: NodeRef,
+    text_model: TextModel,
 }
+
+//  WARN: Should not be rendered before hydration.
+//        Will panic due to calls to web apis.
 
 impl Component for CustomEditor {
     type Message = Msg;
     type Properties = Props;
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let text_model = &ctx.props().text_model;
         let read_only = ctx.props().read_only;
 
         let on_editor_created = ctx.link().callback(Msg::EditorCreated);
@@ -75,7 +87,7 @@ impl Component for CustomEditor {
               <CodeEditor
                 classes={"editor"}
                 options={get_editor_options(read_only)}
-                model={text_model.clone()}
+                model={self.text_model.clone()}
                 {on_editor_created}
               />
           </div>
@@ -83,12 +95,22 @@ impl Component for CustomEditor {
     }
 
     fn create(ctx: &Context<Self>) -> Self {
+        log::info!("Editor Created");
+        monaco::workers::ensure_environment_set();
+        register_ram();
+
+        let code = get_from_local_storage("code").unwrap_or_else(|| DEFAULT_CODE.to_string());
+        let text_model = TextModel::create(code.as_str(), Some("ram"), None)
+            .expect("Failed to create text model");
+        let text_model_clone = text_model.clone();
+
+        ctx.props().set_text_model.emit(text_model.clone());
+
         let editor_ref: NodeRef = Default::default();
         let editor = None;
-        let text_model = ctx.props().text_model.clone();
 
         let on_before_unload = Closure::wrap(Box::new(move |_| {
-            save_to_local_storage("code", &text_model.get_value());
+            save_to_local_storage("code", &text_model_clone.get_value());
         }) as Box<dyn FnMut(web_sys::Event)>);
 
         if let Some(window) = window() {
@@ -101,15 +123,14 @@ impl Component for CustomEditor {
         }
         on_before_unload.forget();
 
-        Self { editor, editor_ref }
+        Self {
+            editor,
+            editor_ref,
+            text_model,
+        }
     }
 
     fn changed(&mut self, ctx: &Context<Self>, old_props: &Self::Properties) -> bool {
-        assert!(
-            ctx.props().text_model == old_props.text_model,
-            "Text model changed"
-        );
-
         let read_only = ctx.props().read_only;
 
         if read_only != old_props.read_only {
@@ -125,7 +146,7 @@ impl Component for CustomEditor {
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        let text_model = &ctx.props().text_model;
+        let text_model = &self.text_model;
         let run_code = &ctx.props().run_code;
 
         match msg {

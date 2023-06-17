@@ -16,17 +16,16 @@ strip = "debuginfo"
 opt-level = 3
 
 [dependencies]
-# yew = { git = "https://github.com/yewstack/yew.git", features = ["csr"] }
-# yewdux = { git = "https://github.com/intendednull/yewdux.git" }
-
-yew = { version = "0.20", features = ["csr"] }
+yew = { version = "0.20", features = ["csr", "hydration", "ssr"] }
 yewdux = "0.9"
 wasm-bindgen = "0.2.84"
 js-sys = "0.3.61"
-wasm-bindgen-futures = "0.4.34"
 wasm-logger = "0.2.0"
 log = "0.4.17"
 urlencoding = "2.1.2"
+futures = "0.3.28"
+wasm-bindgen-futures = "0.4.34"
+console_error_panic_hook = "0.1.7"
 
 [dependencies.web-sys]
 version = "0.3.61"
@@ -41,3 +40,5 @@ features = ["yew", "yew-components"]
 git = "https://github.com/AVO-cado-team/ramemu.git"
 tag = "0.1.6"
 features = ["wasm"]
+
+

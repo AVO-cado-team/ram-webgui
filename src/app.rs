@@ -11,12 +11,11 @@ use crate::code_runner::CodeRunner;
 use crate::code_runner::Msg as CodeRunnerMsg;
 use crate::header::Header;
 use crate::memory::Memory;
-use crate::utils::get_from_local_storage;
+use crate::utils::after_hydration::HydrationGate;
 
 pub struct App {
     memory: Registers<i64>,
-    text_model: TextModel,
-    default_code: String,
+    text_model: Option<TextModel>,
     code_runner_scope: Option<Scope<CodeRunner>>,
     breakpoints: HashSet<usize>,
     read_only: bool,
@@ -30,22 +29,15 @@ pub enum Msg {
     DebugStep,
     DebugStart,
     SetReadOnly(bool),
+    SetTextModel(TextModel),
 }
-
-const DEFAULT_CODE: &str = r#"
-read 1
-write 1
-read 2
-write 2
-halt
-"#;
 
 impl Component for App {
     type Message = Msg;
     type Properties = ();
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let run_code = ctx.link().callback(|_| Msg::RunCode);
+        let run_code = ctx.link().callback(|_: ()| Msg::RunCode);
         let set_read_only = ctx.link().callback(Msg::SetReadOnly);
 
         let on_run = ctx.link().callback(|_| Msg::RunCode);
@@ -53,45 +45,45 @@ impl Component for App {
         let on_step = ctx.link().callback(|_| Msg::DebugStep);
         let on_debug = ctx.link().callback(|_| Msg::DebugStart);
 
+        let set_text_model = ctx.link().callback(Msg::SetTextModel);
+        let editor_placeholder = html! {<div id="container" class="editor-container placeholder"/>};
+
         html! {
           <main id="ram-web">
-            <Header {on_run} {on_step} {on_stop} {on_debug} />
+              <Header {on_run} {on_step} {on_stop} {on_debug} />
 
-            <div class="interface">
-              <div class="editor-registers">
-                  <CustomEditor
-                    read_only={self.read_only}
-                    value={self.default_code.clone()}
-                    text_model={self.text_model.clone()}
-                    run_code={run_code}
-                  />
-                  <Memory entries={self.memory.clone()} />
+              <div class="interface">
+                  <div class="editor-registers">
+                      <HydrationGate placeholder={editor_placeholder}>
+                          <CustomEditor
+                              read_only={self.read_only}
+                              set_text_model={set_text_model}
+                              run_code={run_code}
+                          />
+                      </HydrationGate>
+                      <Memory entries={self.memory.clone()} />
+                  </div>
               </div>
-            </div>
 
-            <CodeRunner
-              set_memory={ctx.link().callback(Msg::SetMemory)}
-              set_scope={ctx.link().callback(Msg::SetRunnerScope)}
-              breakpoints={self.breakpoints.clone()}
-              set_read_only={set_read_only}
-            />
+              <CodeRunner
+                set_memory={ctx.link().callback(Msg::SetMemory)}
+                set_scope={ctx.link().callback(Msg::SetRunnerScope)}
+                breakpoints={self.breakpoints.clone()}
+                set_read_only={set_read_only}
+              />
 
           </main>
         }
     }
 
     fn create(_ctx: &Context<Self>) -> Self {
-        let code = get_from_local_storage("code").unwrap_or_else(|| DEFAULT_CODE.to_string());
-        let text_model = TextModel::create(code.as_str(), Some("ram"), None)
-            .expect("Failed to create text model");
-
+        log::info!("App Created");
         Self {
             memory: Default::default(),
             code_runner_scope: None,
-            text_model,
-            default_code: code,
+            text_model: None,
             breakpoints: Default::default(),
-            read_only: false
+            read_only: false,
         }
     }
 
@@ -102,17 +94,21 @@ impl Component for App {
                 self.memory = memory;
                 return true;
             }
+            Msg::SetTextModel(text_model) => {
+                self.text_model = Some(text_model);
+                return true;
+            }
             Msg::SetReadOnly(read_only) => {
                 self.read_only = read_only;
             }
             Msg::RunCode => {
-                if let Some(s) = &self.code_runner_scope {
-                    s.send_message(CodeRunnerMsg::RunCode(self.text_model.get_value()));
+                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
+                    runner.send_message(CodeRunnerMsg::RunCode(text_model.get_value()));
                 }
             }
             Msg::DebugStart => {
-                if let Some(s) = &self.code_runner_scope {
-                    s.send_message(CodeRunnerMsg::DebugStart(self.text_model.get_value()));
+                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
+                    runner.send_message(CodeRunnerMsg::DebugStart(text_model.get_value()));
                 }
             }
             Msg::DebugStop => {
@@ -127,5 +123,13 @@ impl Component for App {
             }
         }
         false
+    }
+}
+
+impl App {
+    fn zip_code_runner_and_text_model(&self) -> Option<(&Scope<CodeRunner>, &TextModel)> {
+        self.code_runner_scope
+            .as_ref()
+            .zip(self.text_model.as_ref())
     }
 }

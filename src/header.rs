@@ -1,6 +1,6 @@
 use crate::utils::use_event_listener;
 use wasm_bindgen::JsCast;
-use web_sys::{window, Node};
+use web_sys::{window as get_window, Node, Window};
 use yew::prelude::*;
 
 use crate::about_popup::AboutPopup;
@@ -17,9 +17,15 @@ pub struct Props {
 pub fn header(props: &Props) -> Html {
     let popup_ref = use_node_ref();
     let popup_button_ref = use_node_ref();
+    let window = use_state(|| None::<Window>);
+    let window_clone = window.clone();
+
+    use_effect_with_deps(move |_| {
+        window_clone.set(Some(get_window().unwrap()));
+    }, ());
 
     let on_start = props.on_run.clone();
-    //  TODO: Replace to step
+    //  TODO: Replace Image to step
     let on_step = props.on_step.clone();
     let on_stop = props.on_stop.clone();
     let on_debug = props.on_debug.clone();
@@ -50,7 +56,7 @@ pub fn header(props: &Props) -> Html {
                 show_popup.set(popup_element.contains(target) || about_us_btn.contains(target));
             },
             (popup_ref_d, about_us_btn_d),
-            window().unwrap().into(),
+            (*window).clone().map(|w| w.into()),
         );
     }
 

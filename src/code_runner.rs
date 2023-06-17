@@ -5,7 +5,6 @@ use crate::io::custom_writer::CustomWriter;
 use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 use crate::io::output::OutputComponentErrors;
-use crate::utils::get_from_local_storage;
 use crate::utils::save_to_local_storage;
 
 use ramemu::program::Program;
@@ -14,8 +13,6 @@ use ramemu::ram::RamState;
 use ramemu::registers::Registers;
 
 use yew::{html::Scope, prelude::*};
-
-const DEFAULT_STDIN: &str = r#" 3 4 "#;
 
 pub enum Msg {
     RunCode(String),
@@ -54,9 +51,6 @@ impl Component for CodeRunner {
     fn view(&self, ctx: &Context<Self>) -> Html {
         let on_input_changed = ctx.link().callback(Msg::InputChanged);
 
-        let default_stdin =
-            get_from_local_storage("stdin").unwrap_or_else(|| DEFAULT_STDIN.to_string());
-
         html! {
             <div class="console-container">
               <OutputComponent
@@ -65,19 +59,15 @@ impl Component for CodeRunner {
               />
               <InputComponent
                 on_change={on_input_changed}
-                default_value={default_stdin}
               />
           </div>
         }
     }
 
     fn create(ctx: &Context<Self>) -> Self {
-        monaco::workers::ensure_environment_set();
-
         ctx.props().set_scope.emit(ctx.link().clone());
-        let stdin = get_from_local_storage("stdin").unwrap_or_else(|| DEFAULT_STDIN.to_string());
 
-        let reader = CustomReader::new(stdin);
+        let reader = CustomReader::new(String::new());
 
         CodeRunner {
             error: None,

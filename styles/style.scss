@@ -9,7 +9,8 @@ html {
 }
 
 body {
-  background: #25292f;
+  /* background: #25292f; */
+  background: #282c34;
 }
 
 .control-btn {
@@ -275,4 +276,16 @@ a:hover {
 
 .input-values:focus {
   outline: none;
+}
+
+.placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.placeholder::before {
+  content: "Loading....";
+  color: #ffffff;
+  display: block;
 }

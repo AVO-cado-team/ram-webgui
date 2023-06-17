@@ -1,12 +1,16 @@
-use js_sys::{Array, Object};
-use monaco::api::{CodeEditor, TextModel};
-use monaco::sys::editor::{ICodeEditor, IEditor, IIdentifiedSingleEditOperation, ITextModel};
-use monaco::sys::{Position, Range};
+pub mod after_hydration;
+
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use js_sys::{Array, Object};
 use wasm_bindgen::{closure::Closure, convert::FromWasmAbi, JsCast};
 use web_sys::{Document, Event, EventTarget, HtmlAnchorElement, HtmlElement};
 use yew::prelude::*;
+
+use monaco::api::{CodeEditor, TextModel};
+use monaco::sys::editor::{ICodeEditor, IEditor, IIdentifiedSingleEditOperation, ITextModel};
+use monaco::sys::{Position, Range};
 
 pub fn get_from_local_storage(key: &str) -> Option<String> {
     let window = web_sys::window()?;
@@ -28,14 +32,18 @@ pub fn save_to_local_storage(key: &str, value: &str) {
 }
 
 #[hook]
-pub fn use_event_listener<F, T, E>(event: &'static str, handler: F, deps: T, element: EventTarget)
-where
+pub fn use_event_listener<F, T, E>(
+    event: &'static str,
+    handler: F,
+    deps: T,
+    element: Option<EventTarget>,
+) where
     F: Fn(E) + 'static,
     T: PartialEq + 'static,
     E: JsCast + FromWasmAbi + 'static,
 {
     use_effect_with_deps(
-        move |_: &T| {
+        move |(_, element): &(T, Option<EventTarget>)| {
             let closure = Closure::wrap(Box::new(move |event: Event| {
                 let event = event
                     .dyn_into::<E>()
@@ -43,17 +51,24 @@ where
                 handler(event);
             }) as Box<dyn FnMut(Event)>);
 
-            element
-                .add_event_listener_with_callback(event, closure.as_ref().unchecked_ref())
-                .expect("Failed to add event listener");
-
-            move || {
+            if let Some(element) = element {
                 element
-                    .remove_event_listener_with_callback(event, closure.as_ref().unchecked_ref())
+                    .add_event_listener_with_callback(event, closure.as_ref().unchecked_ref())
                     .expect("Failed to add event listener");
             }
+            let element = element.clone();
+            move || {
+                if let Some(element) = element {
+                    element
+                        .remove_event_listener_with_callback(
+                            event,
+                            closure.as_ref().unchecked_ref(),
+                        )
+                        .expect("Failed to remove event listener");
+                }
+            }
         },
-        deps,
+        (deps, element),
     );
 }
 

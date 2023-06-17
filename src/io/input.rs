@@ -3,21 +3,36 @@
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
+use crate::utils::get_from_local_storage;
+
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
     pub on_change: Callback<String>,
-    #[prop_or_default]
-    pub default_value: AttrValue,
 }
+
+const DEFAULT_STDIN: &str = r#" 3 4 "#;
 
 #[function_component(InputComponent)]
 pub fn input_component(props: &Props) -> Html {
     let on_change = props.on_change.clone();
-    let value = use_state(|| props.default_value.to_string());
+    let value = use_state(|| "".to_string());
+
+    let on_change2 = props.on_change.clone();
+    let value_cloned = value.clone();
+
+    use_effect_with_deps(
+        move |_| {
+            let value =
+                get_from_local_storage("stdin").unwrap_or_else(|| DEFAULT_STDIN.to_string());
+            value_cloned.set(value.clone());
+            on_change2.emit(value);
+        },
+        (),
+    );
+
     let value_cloned = value.clone();
 
     let handle_change = move |event: InputEvent| {
-        // It could be an If let, but I prefer to panic here
         let input = event
             .target_dyn_into::<HtmlInputElement>()
             .expect("Failed to cast event target to HtmlTextAreaElement");
