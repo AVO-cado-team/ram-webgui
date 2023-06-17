@@ -14,9 +14,9 @@ default-run = "ram-webgui"
 name = "ram-webgui"
 path = "src/main.rs"
 
-[[bin]]
-name = "hydrated"
-path = "src/bin/hydrated.rs"
+# [[bin]]
+# name = "hydrated"
+# path = "src/bin/hydrated.rs"
 
 [features]
 ssr = ["yew/ssr", "yew/hydration", "futures"]
