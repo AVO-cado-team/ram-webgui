@@ -6,6 +6,7 @@ use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 use crate::io::output::OutputComponentErrors;
 use crate::utils::save_to_local_storage;
+use crate::utils::sleep;
 
 use ramemu::program::Program;
 use ramemu::ram::Ram;
@@ -14,8 +15,14 @@ use ramemu::registers::Registers;
 
 use yew::{html::Scope, prelude::*};
 
+use std::time::Duration;
+
+#[cfg(debug_assertions)]
+const DELAY_BETWEEN_STEPS: Duration = Duration::from_millis(10);
+#[cfg(not(debug_assertions))]
+const DELAY_BETWEEN_STEPS: Duration = Duration::from_millis(10);
+
 pub enum Msg {
-    RunCode(String),
     DebugStart(String),
     DebugStep,
     DebugStop,
@@ -37,11 +44,26 @@ pub struct CodeRunner {
     stdout: String,
     reader: CustomReader,
     writer: CustomWriter,
-    debug: Option<DebugState>,
+    debug: Option<State>,
 }
 
-struct DebugState {
+#[derive(Clone, PartialEq)]
+enum StateKind {
+    DebugContinue,
+    DebugPause,
+}
+
+use StateKind::*;
+
+struct State {
+    kind: StateKind,
     ram: Ram,
+}
+
+impl State {
+    fn new(kind: StateKind, ram: Ram) -> State {
+        State { kind, ram }
+    }
 }
 
 impl Component for CodeRunner {
@@ -88,30 +110,6 @@ impl Component for CodeRunner {
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::RunCode(code) => {
-                log::info!("Run Code");
-
-                if self.debug.is_some() {
-                    ctx.link().send_message(Msg::DebugContinue);
-                    return false;
-                }
-
-                self.stdout.clear();
-                match Program::from_source(&code) {
-                    Ok(program) => {
-                        let mut ram = Ram::new(
-                            program,
-                            Box::new(self.reader.clone()),
-                            Box::new(self.writer.clone()),
-                        );
-                        self.error = ram.run().err().map(OutputComponentErrors::InterpretError);
-                        let state: RamState = ram.into();
-
-                        ctx.props().set_memory.emit(state.registers);
-                    }
-                    Err(e) => self.error = Some(OutputComponentErrors::ParseError(e)),
-                };
-            }
             Msg::DebugStart(code) => {
                 log::info!("Debug Start");
 
@@ -124,66 +122,75 @@ impl Component for CodeRunner {
                             Box::new(self.writer.clone()),
                         );
 
-                        self.debug = Some(DebugState { ram });
-
                         ctx.props().set_read_only.emit(true);
 
-                        ctx.link().send_message(Msg::DebugStep);
+                        if cfg!(debug_assertions) {
+                            self.debug = Some(State::new(DebugPause, ram));
+                            ctx.link().send_message(Msg::DebugStep);
+                        } else {
+                            self.debug = Some(State::new(DebugContinue, ram));
+                            ctx.link().send_message(Msg::DebugContinue);
+                        }
                     }
                     Err(e) => self.error = Some(OutputComponentErrors::ParseError(e)),
                 };
             }
-            Msg::DebugStep => {
+            Msg::DebugStep => 'block: {
                 log::info!("Debug Step");
 
-                if let Some(debug) = self.debug.as_mut() {
-                    debug.ram.next();
+                //  NOTE: by the ent of step kind would not change.
+                let Some(State { kind: DebugPause, ram }) = self.debug.as_mut() else {
+                    break 'block
+                };
 
-                    let state: RamState = (&debug.ram).into();
+                if ram.next().is_some() {
+                    let state: RamState = ram.into();
 
                     ctx.props().set_memory.emit(state.registers);
                     // ctx.props().set_line.emit(state.line);
-
-                    if state.halt {
-                        ctx.link().send_message(Msg::DebugStop);
-                    }
+                } else {
+                    ctx.link().send_message(Msg::DebugStop);
                 }
             }
-            Msg::DebugContinue => {
+            Msg::DebugContinue => 'block: {
                 log::info!("Debug Continue");
+                let Some(State {
+                    kind: kind @ DebugContinue,
+                    ram,
+                }) = self.debug.as_mut() else { break 'block };
 
-                if let Some(debug) = self.debug.as_mut() {
-                    for result in debug.ram.by_ref() {
-                        let breakpoints = &ctx.props().breakpoints;
-                        match result {
-                            Ok(state) if breakpoints.contains(&state.line) => break,
-                            Err(_) => break,
-                            _ => {}
-                        }
+
+                let breakpoints = &ctx.props().breakpoints;
+
+                match ram.next() {
+                    Some(state) if breakpoints.contains(&state.line) => *kind = DebugPause,
+                    None => ctx.link().send_message(Msg::DebugStop),
+                    Some(_) => {
+                        let scope = ctx.link().clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            sleep(DELAY_BETWEEN_STEPS).await;
+                            scope.send_message(Msg::DebugContinue);
+                        });
                     }
+                };
 
-                    let state: RamState = (&debug.ram).into();
-
-                    ctx.props().set_memory.emit(state.registers);
-                    // ctx.props().set_line.emit(state.line);
-
-                    if state.halt {
-                        ctx.link().send_message(Msg::DebugStop);
-                    }
-                }
+                let state: RamState = ram.into();
+                ctx.props().set_memory.emit(state.registers);
+                // ctx.props().set_line.emit(state.line);
             }
-            Msg::DebugStop => {
+            Msg::DebugStop => 'block: {
                 log::info!("Debug Stop");
 
+                let Some(State { kind: _, ram }) = self.debug.take() else {
+                    break 'block
+                };
+
+                let state: RamState = ram.into();
+                self.error = state.error.map(OutputComponentErrors::InterpretError);
+
                 ctx.props().set_read_only.emit(false);
-
-                if let Some(debug) = self.debug.take() {
-                    let state: RamState = debug.ram.into();
-                    self.error = state.error.map(OutputComponentErrors::InterpretError);
-
-                    ctx.props().set_memory.emit(state.registers);
-                    // ctx.props().set_line.emit(state.line);
-                }
+                ctx.props().set_memory.emit(state.registers);
+                // ctx.props().set_line.emit(state.line);
             }
 
             Msg::WriterWrote(data) => {

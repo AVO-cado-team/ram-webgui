@@ -20,9 +20,12 @@ pub fn header(props: &Props) -> Html {
     let window = use_state(|| None::<Window>);
     let window_clone = window.clone();
 
-    use_effect_with_deps(move |_| {
-        window_clone.set(Some(get_window().unwrap()));
-    }, ());
+    use_effect_with_deps(
+        move |_| {
+            window_clone.set(Some(get_window().unwrap()));
+        },
+        (),
+    );
 
     let on_start = props.on_run.clone();
     //  TODO: Replace Image to step

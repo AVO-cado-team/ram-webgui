@@ -37,6 +37,7 @@ impl Component for App {
     type Properties = ();
 
     fn view(&self, ctx: &Context<Self>) -> Html {
+        // TODO: Run Code == Debug Start
         let run_code = ctx.link().callback(|_: ()| Msg::RunCode);
         let set_read_only = ctx.link().callback(Msg::SetReadOnly);
 
@@ -101,12 +102,7 @@ impl Component for App {
             Msg::SetReadOnly(read_only) => {
                 self.read_only = read_only;
             }
-            Msg::RunCode => {
-                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
-                    runner.send_message(CodeRunnerMsg::RunCode(text_model.get_value()));
-                }
-            }
-            Msg::DebugStart => {
+            Msg::RunCode | Msg::DebugStart => {
                 if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
                     runner.send_message(CodeRunnerMsg::DebugStart(text_model.get_value()));
                 }
