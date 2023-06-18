@@ -1,228 +1,135 @@
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
+use std::collections::HashSet;
+
+use monaco::api::TextModel;
+use ramemu::registers::Registers;
+
+use yew::html::Scope;
+use yew::prelude::*;
 
 use crate::code_editor::CustomEditor;
 use crate::code_runner::CodeRunner;
+use crate::code_runner::Msg as CodeRunnerMsg;
 use crate::header::Header;
 use crate::memory::Memory;
-use crate::utils::comment_selected_code;
-use crate::utils::download_code;
-use crate::utils::get_from_local_storage;
-use crate::utils::save_to_local_storage;
-
-use wasm_bindgen::closure::Closure;
-use wasm_bindgen::JsCast;
-use web_sys::window;
-use yew::html::Scope;
-use yew::prelude::*;
-type JsCallback = Closure<dyn Fn()>;
-use crate::code_runner::Msg as CodeRunnerMsg;
-use monaco::sys::KeyCode;
-use monaco::sys::KeyMod;
-use monaco::{api::TextModel, sys::editor::IStandaloneCodeEditor, yew::CodeEditorLink};
-use ramemu::registers::Registers;
+use crate::utils::after_hydration::HydrationGate;
 
 pub struct App {
-  code_runner_scope: Option<Scope<CodeRunner>>,
-  editor: Option<CodeEditorLink>,
-  editor_ref: NodeRef,
-  text_model: TextModel,
-  memory: Registers<i64>,
-  default_code: String,
+    memory: Registers<i64>,
+    text_model: Option<TextModel>,
+    code_runner_scope: Option<Scope<CodeRunner>>,
+    breakpoints: HashSet<usize>,
+    read_only: bool,
 }
 
 pub enum Msg {
-  EditorCreated(CodeEditorLink),
-  SetRunnerScope(Scope<CodeRunner>),
-  SetMemory(Registers<i64>),
-  DownloadCode,
-  SaveCode,
-  CommentCode,
-  RunCode,
+    SetRunnerScope(Scope<CodeRunner>),
+    SetMemory(Registers<i64>),
+    RunCode,
+    DebugStop,
+    DebugStep,
+    DebugStart,
+    SetReadOnly(bool),
+    SetTextModel(TextModel),
 }
 
-const DEFAULT_CODE: &str = r#"
-read 1
-write 1
-read 2
-write 2
-halt
-"#;
-
-static EDITOR_WAS_CREATED: AtomicBool = AtomicBool::new(false);
-
 impl Component for App {
-  type Message = Msg;
-  type Properties = ();
+    type Message = Msg;
+    type Properties = ();
 
-  fn create(_ctx: &Context<Self>) -> Self {
-    let editor_ref: NodeRef = Default::default();
-    let code = get_from_local_storage("code").unwrap_or_else(|| DEFAULT_CODE.to_string());
-    let text_model =
-      TextModel::create(code.as_str(), Some("ram"), None).expect("Failed to create text model");
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let run_code = ctx.link().callback(|_: ()| Msg::RunCode);
+        let set_read_only = ctx.link().callback(Msg::SetReadOnly);
 
-    {
-      let text_model = text_model.clone();
-      let on_before_unload = Closure::wrap(Box::new(move |_| {
-        save_to_local_storage("code", &text_model.get_value());
-      }) as Box<dyn FnMut(web_sys::Event)>);
+        let on_run = ctx.link().callback(|_| Msg::RunCode);
+        let on_stop = ctx.link().callback(|_| Msg::DebugStop);
+        let on_step = ctx.link().callback(|_| Msg::DebugStep);
+        let on_debug = ctx.link().callback(|_| Msg::DebugStart);
 
-      if let Some(window) = window() {
-        window
-          .add_event_listener_with_callback(
-            "beforeunload",
-            on_before_unload.as_ref().unchecked_ref(),
-          )
-          .expect("Failed to add beforeunload event listener");
-      }
-      on_before_unload.forget();
-    }
+        let set_text_model = ctx.link().callback(Msg::SetTextModel);
+        let editor_placeholder = html! {<div id="container" class="editor-container placeholder"/>};
 
-    Self {
-      memory: Default::default(),
-      editor: None,
-      code_runner_scope: None,
-      editor_ref,
-      text_model,
-      default_code: code,
-    }
-  }
+        html! {
+          <main id="ram-web">
+              <Header {on_run} {on_step} {on_stop} {on_debug} />
 
-  fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-    match msg {
-      Msg::EditorCreated(editor_link) => {
-        if EDITOR_WAS_CREATED.fetch_or(true, Ordering::SeqCst) {
-          panic!("Editor was created twice!");
-        }
-
-        log::info!("Editor Created");
-        self.editor = Some(editor_link.clone());
-        let link1 = ctx.link().clone();
-        let link2 = ctx.link().clone();
-        let link3 = ctx.link().clone();
-        let link4 = ctx.link().clone();
-
-        let code_runner = JsCallback::new(move || link1.send_message(Msg::DownloadCode));
-        let downloader = JsCallback::new(move || link2.send_message(Msg::CommentCode));
-        let commenter = JsCallback::new(move || link3.send_message(Msg::CommentCode));
-        let code_saver = JsCallback::new(move || {
-          let link = link4.clone();
-          let code_saver_core = JsCallback::new(move || link.send_message(Msg::SaveCode));
-          window()
-            .unwrap()
-            .set_timeout_with_callback_and_timeout_and_arguments_0(
-              code_saver_core.as_ref().unchecked_ref(),
-              50,
-            )
-            .unwrap();
-          code_saver_core.forget();
-        });
-
-        self
-          .editor_ref
-          .get()
-          .unwrap()
-          .add_event_listener_with_callback("keydown", code_saver.as_ref().unchecked_ref())
-          .expect("Failed to add event listener");
-
-        editor_link.with_editor(|editor| {
-          let run_code = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
-          let save_code = KeyCode::KeyS.to_value() | (KeyMod::ctrl_cmd() as u32);
-          let comment_code = KeyCode::UsSlash.to_value() | (KeyMod::ctrl_cmd() as u32);
-          let code_runner = code_runner.as_ref().unchecked_ref();
-          let downloader = downloader.as_ref().unchecked_ref();
-          let commenter = commenter.as_ref().unchecked_ref();
-          ctx.link().send_message(Msg::SaveCode);
-
-          let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
-          raw_editor.add_command(run_code.into(), code_runner, None);
-          raw_editor.add_command(save_code.into(), downloader, None);
-          raw_editor.add_command(comment_code.into(), commenter, None);
-
-          save_to_local_storage("code", &self.text_model.get_value());
-        });
-
-        // It iis okay to forget these callbacks because editor will not be created twice
-        // so this is not a real memory leak - it will behave like a normal value, and will
-        // be freed when the editor is dropped, becouse it will be the end of the program.
-        // Editor will not be dropped before the end of the program, so it is okay.
-        code_runner.forget();
-        downloader.forget();
-        commenter.forget();
-        code_saver.forget();
-      }
-      Msg::DownloadCode => {
-        download_code(&self.text_model.get_value()).expect("Failed to download code")
-      }
-      Msg::SaveCode => {
-        log::info!("Saving!");
-        save_to_local_storage("code", &self.text_model.get_value());
-        return true;
-      }
-      Msg::CommentCode => {
-        if let Some(editor) = &self.editor {
-          editor.with_editor(|editor| comment_selected_code(editor, &self.text_model));
-        }
-        return true;
-      }
-      Msg::SetRunnerScope(scope) => self.code_runner_scope = Some(scope),
-      Msg::SetMemory(memory) => {
-        self.memory = memory;
-        return true;
-      }
-      Msg::RunCode => {
-        if let Some(s) = &self.code_runner_scope {
-          s.send_message(CodeRunnerMsg::RunCode(self.text_model.get_value()));
-        }
-      }
-    };
-    false
-  }
-
-  fn destroy(&mut self, _ctx: &Context<Self>) {
-    let new_code = self.text_model.get_value() + " MARKER";
-    save_to_local_storage("code", &new_code);
-  }
-
-  fn view(&self, ctx: &Context<Self>) -> Html {
-    let on_editor_created = ctx.link().callback(Msg::EditorCreated);
-    let on_start = ctx.link().callback(|_| Msg::RunCode);
-    let on_pause = ctx.link().batch_callback(|_| None); // TODO:
-    let on_stop = ctx.link().batch_callback(|_| None); // TODO:
-    let on_debug = ctx.link().batch_callback(|_| None); // TODO:
-
-    html! {
-      <main id="ram-web">
-        <Header {on_start} {on_stop} {on_pause} {on_debug} />
-
-        <div class="interface">
-          <div class="editor-registers">
-              <div id="container" class="editor-container" ref={self.editor_ref.clone()}>
-                <CustomEditor
-                  value={self.default_code.clone()}
-                  {on_editor_created}
-                  text_model={self.text_model.clone()}
-                />
+              <div class="interface">
+                  <div class="editor-registers">
+                      <HydrationGate placeholder={editor_placeholder}>
+                          <CustomEditor
+                              read_only={self.read_only}
+                              set_text_model={set_text_model}
+                              run_code={run_code}
+                          />
+                      </HydrationGate>
+                      <Memory entries={self.memory.clone()} />
+                  </div>
               </div>
-              <Memory entries={self.memory.clone()} />
-          </div>
-        </div>
 
-        <CodeRunner
-          set_memory={ctx.link().callback(Msg::SetMemory)}
-          set_scope={ctx.link().callback(Msg::SetRunnerScope)}
-        />
+              <CodeRunner
+                set_memory={ctx.link().callback(Msg::SetMemory)}
+                set_scope={ctx.link().callback(Msg::SetRunnerScope)}
+                breakpoints={self.breakpoints.clone()}
+                set_read_only={set_read_only}
+              />
 
-      </main>
+          </main>
+        }
     }
-  }
 
-  // TODO: add loader with portal or whatever
-  // <div id="loader">
-  //     <div class="orbe" style="--index: 0"></div>
-  //     <div class="orbe" style="--index: 1"></div>
-  //     <div class="orbe" style="--index: 2"></div>
-  //     <div class="orbe" style="--index: 3"></div>
-  //     <div class="orbe" style="--index: 4"></div>
-  // </div>
+    fn create(_ctx: &Context<Self>) -> Self {
+        log::info!("App Created");
+        Self {
+            memory: Default::default(),
+            code_runner_scope: None,
+            text_model: None,
+            breakpoints: Default::default(),
+            read_only: false,
+        }
+    }
+
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+        match msg {
+            Msg::SetRunnerScope(scope) => self.code_runner_scope = Some(scope),
+            Msg::SetMemory(memory) => {
+                self.memory = memory;
+                return true;
+            }
+            Msg::SetTextModel(text_model) => {
+                self.text_model = Some(text_model);
+                return true;
+            }
+            Msg::SetReadOnly(read_only) => {
+                self.read_only = read_only;
+            }
+            Msg::RunCode => {
+                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
+                    runner.send_message(CodeRunnerMsg::RunCode(text_model.get_value()));
+                }
+            }
+            Msg::DebugStart => {
+                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
+                    runner.send_message(CodeRunnerMsg::DebugStart(text_model.get_value()));
+                }
+            }
+            Msg::DebugStop => {
+                if let Some(s) = &self.code_runner_scope {
+                    s.send_message(CodeRunnerMsg::DebugStop);
+                }
+            }
+            Msg::DebugStep => {
+                if let Some(s) = &self.code_runner_scope {
+                    s.send_message(CodeRunnerMsg::DebugStep);
+                }
+            }
+        }
+        false
+    }
+}
+
+impl App {
+    fn zip_code_runner_and_text_model(&self) -> Option<(&Scope<CodeRunner>, &TextModel)> {
+        self.code_runner_scope
+            .as_ref()
+            .zip(self.text_model.as_ref())
+    }
 }

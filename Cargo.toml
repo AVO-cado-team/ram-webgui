@@ -1,31 +1,54 @@
 [package]
 name = "ram-webgui"
-version = "0.1.1"
+version = "0.1.3"
 edition = "2021"
 description = "Webgui for ramemu"
 readme = "README.md"
-repository = "https://github.com/AVO-cado-team/ramemu"
+repository = "https://github.com/AVO-cado-team/ram-webgui"
 license = "GPL3"
-keywords = ["yew", "trunk"]
+keywords = ["yew", "trunk", "ram"]
 categories = ["gui", "wasm", "web-programming"]
+default-run = "ram-webgui"
 
-[dependencies]
-yew = { version = "0.20", features = ["csr"] }
-wasm-bindgen = "0.2.84"
-js-sys = "0.3.61"
-web-sys = { version = "0.3.61", features = ['Document', 'Window', 'Element', 'HtmlElement', 'Node', 'CssStyleDeclaration', 'HtmlAnchorElement'] }
+[[bin]]
+name = "ram-webgui"
+path = "src/main.rs"
 
-monaco = { git = "https://github.com/siku2/rust-monaco/", rev = "794a4cc7819f9ed7eb06559e24f75a41e23cf22a", features = ["yew", "yew-components"] }
-# ramemu = { git = "https://github.com/AVO-cado-team/ramemu.git", tag = "0.1.5", features = ["wasm"]}
-ramemu = { git = "https://github.com/AVO-cado-team/ramemu.git", tag = "0.1.6", features = ["wasm"]}
-wasm-bindgen-futures = "0.4.34"
-# futures = "0.3.28"
-wasm-logger = "0.2.0"
-log = "0.4.17"
-urlencoding = "2.1.2"
+# [[bin]]
+# name = "hydrated"
+# path = "src/bin/hydrated.rs"
+
+[features]
+ssr = ["yew/ssr", "yew/hydration", "futures"]
 
 [profile.release]
 lto = true
 codegen-units = 1
 strip = "debuginfo"
 opt-level = 3
+
+[dependencies]
+yew = { version = "0.20", features = ["csr"] }
+wasm-bindgen = "0.2.84"
+js-sys = "0.3.61"
+wasm-logger = "0.2.0"
+log = "0.4.17"
+urlencoding = "2.1.2"
+console_error_panic_hook = "0.1.7"
+futures = { version = "0.3.28", optional = true }
+
+[dependencies.web-sys]
+version = "0.3.61"
+features = ['Document', 'Window', 'Element', 'HtmlElement', 'Node', 'CssStyleDeclaration', 'HtmlAnchorElement']
+
+[dependencies.monaco]
+git = "https://github.com/siku2/rust-monaco/"
+rev = "794a4cc7819f9ed7eb06559e24f75a41e23cf22a"
+features = ["yew", "yew-components"]
+
+[dependencies.ramemu]
+git = "https://github.com/AVO-cado-team/ramemu.git"
+tag = "0.1.6"
+features = ["wasm"]
+
+
