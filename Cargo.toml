@@ -50,7 +50,5 @@ features = ["yew", "yew-components"]
 [dependencies.ramemu]
 git = "https://github.com/AVO-cado-team/ramemu.git"
 # tag = "0.1.7"
-branch = "dev"
-features = ["wasm"]
 
 
