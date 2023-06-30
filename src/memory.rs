@@ -1,4 +1,5 @@
 use ramemu::registers::Registers;
+use ramemu::registers::RegisterId;
 use yew::prelude::*;
 
 const WINDOW_LENGTH: usize = 100;
@@ -13,12 +14,12 @@ pub struct Props {
 pub fn memory(props: &Props) -> Html {
     let registers = &props.entries;
 
-    let starting_index = use_state(|| 0usize);
+    let starting_index = use_state(|| 0);
 
     let register_entries = (0..WINDOW_LENGTH)
         .map(|i| {
             let index = *starting_index + i;
-            let value = registers.get(index);
+            let value = registers.get(RegisterId(index));
             let mut class = "register".to_string();
             if index == 0 {
                 class += " acc"
