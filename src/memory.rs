@@ -1,5 +1,5 @@
-use ramemu::registers::Registers;
 use ramemu::registers::RegisterId;
+use ramemu::registers::Registers;
 use yew::prelude::*;
 
 const WINDOW_LENGTH: usize = 100;
@@ -33,20 +33,18 @@ pub fn memory(props: &Props) -> Html {
         })
         .collect::<Html>();
 
-    let _on_previous_click = {
+    #[allow(unused_variables)]
+    let on_previous_click = Callback::from({
         let starting_index = starting_index.clone();
-        Callback::from(move |_: MouseEvent| {
-            starting_index.set(starting_index.saturating_sub(STEP_SIZE));
-        })
-    };
+        move |_: MouseEvent| starting_index.set(starting_index.saturating_sub(STEP_SIZE))
+    });
 
-    let _on_next_click = {
-        Callback::from(move |_: MouseEvent| {
-            starting_index.set(starting_index.saturating_add(STEP_SIZE));
-        })
-    };
+    #[allow(unused_variables)]
+    let on_next_click = Callback::from({
+        let starting_index = starting_index.clone();
+        move |_: MouseEvent| starting_index.set(starting_index.saturating_add(STEP_SIZE))
+    });
 
-    // TODO: STYLE THESE COMMENTED BUTTONS
     html! {
         <div class="registers-container">
           // <button onclick={on_previous_click}>{"Previous"}</button>

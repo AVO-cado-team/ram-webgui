@@ -139,8 +139,12 @@ impl Component for CodeRunner {
                 log::info!("Debug Step");
 
                 //  NOTE: by the ent of step kind would not change.
-                let Some(State { kind: DebugPause, ram }) = self.debug.as_mut() else {
-                    break 'block
+                let Some(State {
+                    kind: DebugPause,
+                    ram,
+                }) = self.debug.as_mut()
+                else {
+                    break 'block;
                 };
 
                 if ram.next().is_some() {
@@ -157,21 +161,23 @@ impl Component for CodeRunner {
                 let Some(State {
                     kind: kind @ DebugContinue,
                     ram,
-                }) = self.debug.as_mut() else { break 'block };
-
+                }) = self.debug.as_mut()
+                else {
+                    break 'block;
+                };
 
                 let breakpoints = &ctx.props().breakpoints;
 
                 match ram.next() {
                     Some(state) if breakpoints.contains(&state.line) => *kind = DebugPause,
                     None => ctx.link().send_message(Msg::DebugStop),
-                    Some(_) => {
+                    Some(_) => wasm_bindgen_futures::spawn_local({
                         let scope = ctx.link().clone();
-                        wasm_bindgen_futures::spawn_local(async move {
+                        async move {
                             sleep(DELAY_BETWEEN_STEPS).await;
                             scope.send_message(Msg::DebugContinue);
-                        });
-                    }
+                        }
+                    }),
                 };
 
                 let state: RamState = ram.into();
@@ -182,7 +188,7 @@ impl Component for CodeRunner {
                 log::info!("Debug Stop");
 
                 let Some(State { kind: _, ram }) = self.debug.take() else {
-                    break 'block
+                    break 'block;
                 };
 
                 let state: RamState = ram.into();

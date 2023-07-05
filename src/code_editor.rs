@@ -163,7 +163,7 @@ impl Component for CustomEditor {
                 save_to_local_storage("code", &text_model.get_value());
             }
             Msg::EditorCreated(editor_link) => {
-                if EDITOR_WAS_CREATED.fetch_or(true, Ordering::SeqCst) {
+                if EDITOR_WAS_CREATED.swap(true, Ordering::SeqCst) {
                     panic!("Editor was created twice!");
                 }
 
