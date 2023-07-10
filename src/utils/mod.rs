@@ -1,3 +1,4 @@
+#![allow(clippy::float_cmp)]
 pub mod after_hydration;
 
 use std::cell::RefCell;
@@ -36,7 +37,7 @@ pub async fn sleep(delay: Duration) {
     let mut cb = |resolve: js_sys::Function, _reject: js_sys::Function| {
         let _ = web_sys::window()
             .unwrap()
-            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, delay.as_millis() as i32);
+            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, delay.as_millis().try_into().unwrap());
     };
 
     let p = js_sys::Promise::new(&mut cb);
@@ -109,7 +110,7 @@ fn prepare_new_text(lines: Vec<&str>) -> (String, bool) {
     let (toggler, do_comment): (callback, bool) = if lines.iter().all(|l| l.starts_with('#')) {
         (Box::new(|line: &str| String::from(&line[1..])), false)
     } else {
-        (Box::new(|line: &str| format!("#{}", line)), true)
+        (Box::new(|line: &str| format!("#{line}")), true)
     };
 
     let new_text = lines

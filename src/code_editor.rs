@@ -151,7 +151,7 @@ impl Component for CustomEditor {
 
         match msg {
             Msg::DownloadCode => {
-                download_code(&text_model.get_value()).expect("Failed to download code")
+                download_code(&text_model.get_value()).expect("Failed to download code");
             }
             Msg::CommentCode => {
                 if let Some(editor) = &self.editor {

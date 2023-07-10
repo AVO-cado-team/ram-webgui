@@ -15,6 +15,9 @@ use std::panic;
 pub use app::App;
 use wasm_bindgen::prelude::*;
 
+/// Runs app
+/// # Errors
+/// Idk
 pub fn run_app() -> Result<(), JsValue> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     wasm_logger::init(wasm_logger::Config::default());

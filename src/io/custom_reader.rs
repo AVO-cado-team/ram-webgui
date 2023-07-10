@@ -7,13 +7,13 @@ pub struct CustomReader {
 }
 
 impl CustomReader {
-    pub fn new(input: String) -> Self {
+    pub fn new(input: &str) -> Self {
         let mut reader = Self::default();
         reader.set_input(input);
         reader
     }
 
-    pub fn set_input(&mut self, input: String) {
+    pub fn set_input(&mut self, input: &str) {
         // NOTE: there should be '\n' at the end of input, so be aware of that behavior
         self.input = input
             .split_whitespace()

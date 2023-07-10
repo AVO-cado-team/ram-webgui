@@ -15,7 +15,7 @@ const DEFAULT_STDIN: &str = r#" 3 4 "#;
 #[function_component(InputComponent)]
 pub fn input_component(props: &Props) -> Html {
     let on_change = props.on_change.clone();
-    let value = use_state(|| "".to_string());
+    let value = use_state(|| String::new());
 
     let on_change2 = props.on_change.clone();
     let value_cloned = value.clone();

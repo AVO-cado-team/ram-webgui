@@ -22,8 +22,8 @@ pub fn memory(props: &Props) -> Html {
             let value = registers.get(RegisterId(index));
             let mut class = "register".to_string();
             if index == 0 {
-                class += " acc"
-            };
+                class += " acc";
+            }
             html! {
               <div class={class} key={index} >
                 <div class="register-num"><p>{format!("{}", index)}</p></div>
@@ -41,7 +41,7 @@ pub fn memory(props: &Props) -> Html {
 
     #[allow(unused_variables)]
     let on_next_click = Callback::from({
-        let starting_index = starting_index.clone();
+        let starting_index = starting_index;
         move |_: MouseEvent| starting_index.set(starting_index.saturating_add(STEP_SIZE))
     });
 

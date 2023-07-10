@@ -53,7 +53,7 @@ enum StateKind {
     DebugPause,
 }
 
-use StateKind::*;
+use StateKind::{DebugContinue, DebugPause};
 
 struct State {
     kind: StateKind,
@@ -61,8 +61,8 @@ struct State {
 }
 
 impl State {
-    fn new(kind: StateKind, ram: Ram) -> State {
-        State { kind, ram }
+    fn new(kind: StateKind, ram: Ram) -> Self {
+        Self { kind, ram }
     }
 }
 
@@ -89,9 +89,9 @@ impl Component for CodeRunner {
     fn create(ctx: &Context<Self>) -> Self {
         ctx.props().set_scope.emit(ctx.link().clone());
 
-        let reader = CustomReader::new(String::new());
+        let reader = CustomReader::new("");
 
-        CodeRunner {
+        Self {
             error: None,
             debug: None,
             stdout: Default::default(),
@@ -206,7 +206,7 @@ impl Component for CodeRunner {
             Msg::InputChanged(data) => {
                 log::info!("Input changed, {}", &data);
                 save_to_local_storage("stdin", &data);
-                self.reader.set_input(data);
+                self.reader.set_input(&data);
             }
         };
         true
