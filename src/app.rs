@@ -8,6 +8,7 @@ use yew::prelude::*;
 
 use crate::code_editor::CustomEditor;
 use crate::code_runner::CodeRunner;
+use crate::code_runner::DebugAction;
 use crate::code_runner::Msg as CodeRunnerMsg;
 use crate::header::Header;
 use crate::memory::Memory;
@@ -24,7 +25,6 @@ pub struct App {
 pub enum Msg {
     SetRunnerScope(Scope<CodeRunner>),
     SetMemory(Registers<i64>),
-    RunCode,
     DebugStop,
     DebugStep,
     DebugStart,
@@ -37,11 +37,10 @@ impl Component for App {
     type Properties = ();
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        // TODO: Run Code == Debug Start
-        let run_code = ctx.link().callback(|_: ()| Msg::RunCode);
+        let run_code = ctx.link().callback(|_: ()| Msg::DebugStart);
         let set_read_only = ctx.link().callback(Msg::SetReadOnly);
 
-        let on_run = ctx.link().callback(|_| Msg::RunCode);
+        let on_run = ctx.link().callback(|_| Msg::DebugStart);
         let on_stop = ctx.link().callback(|_| Msg::DebugStop);
         let on_step = ctx.link().callback(|_| Msg::DebugStep);
         let on_debug = ctx.link().callback(|_| Msg::DebugStart);
@@ -102,19 +101,23 @@ impl Component for App {
             Msg::SetReadOnly(read_only) => {
                 self.read_only = read_only;
             }
-            Msg::RunCode | Msg::DebugStart => {
+            Msg::DebugStart => {
                 if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
-                    runner.send_message(CodeRunnerMsg::DebugStart(text_model.get_value()));
+                    runner.send_message(CodeRunnerMsg::DebugAction(DebugAction::Start(
+                        text_model.get_value(),
+                    )));
+                }
+            }
+            Msg::DebugStep => {
+                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
+                    runner.send_message(CodeRunnerMsg::DebugAction(DebugAction::Step(
+                        text_model.get_value(),
+                    )));
                 }
             }
             Msg::DebugStop => {
                 if let Some(s) = &self.code_runner_scope {
-                    s.send_message(CodeRunnerMsg::DebugStop);
-                }
-            }
-            Msg::DebugStep => {
-                if let Some(s) = &self.code_runner_scope {
-                    s.send_message(CodeRunnerMsg::DebugStep);
+                    s.send_message(CodeRunnerMsg::DebugAction(DebugAction::Stop));
                 }
             }
         }

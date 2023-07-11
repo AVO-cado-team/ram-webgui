@@ -70,9 +70,9 @@ pub struct CustomEditor {
     text_model: TextModel,
 }
 
-//  WARN: Should not be rendered before hydration.
-//        Will panic due to calls to web apis.
-
+//  WARN:
+/// # Panics
+/// Panics if rendered before hydration.
 impl Component for CustomEditor {
     type Message = Msg;
     type Properties = Props;
