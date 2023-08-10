@@ -34,8 +34,6 @@ use crate::utils::save_to_local_storage;
 
 type JsCallback = Closure<dyn Fn()>;
 
-static EDITOR_WAS_CREATED: AtomicBool = AtomicBool::new(false);
-
 pub fn get_editor_options(read_only: bool) -> IStandaloneEditorConstructionOptions {
     let options = CodeEditorOptions::default()
         .with_language(LANG_ID.to_owned())
@@ -163,6 +161,8 @@ impl Component for CustomEditor {
                 save_to_local_storage("code", &text_model.get_value());
             }
             Msg::EditorCreated(editor_link) => {
+                static EDITOR_WAS_CREATED: AtomicBool = AtomicBool::new(false);
+
                 if EDITOR_WAS_CREATED.swap(true, Ordering::SeqCst) {
                     panic!("Editor was created twice!");
                 }
