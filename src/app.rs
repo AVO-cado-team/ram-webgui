@@ -14,6 +14,7 @@ use crate::header::Header;
 use crate::memory::Memory;
 use crate::utils::after_hydration::HydrationGate;
 
+#[derive(Default)]
 pub struct App {
     memory: Registers<i64>,
     text_model: Option<TextModel>,
@@ -78,18 +79,19 @@ impl Component for App {
 
     fn create(_ctx: &Context<Self>) -> Self {
         log::info!("App Created");
-        Self {
-            memory: Default::default(),
-            code_runner_scope: None,
-            text_model: None,
-            breakpoints: Default::default(),
-            read_only: false,
-        }
+        Self::default()
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+        let zip_code_runner_and_text_model = || {
+            self.code_runner_scope
+                .as_ref()
+                .zip(self.text_model.as_ref())
+        };
+
         match msg {
             Msg::SetRunnerScope(scope) => self.code_runner_scope = Some(scope),
+            Msg::SetReadOnly(read_only) => self.read_only = read_only,
             Msg::SetMemory(memory) => {
                 self.memory = memory;
                 return true;
@@ -98,18 +100,16 @@ impl Component for App {
                 self.text_model = Some(text_model);
                 return true;
             }
-            Msg::SetReadOnly(read_only) => {
-                self.read_only = read_only;
-            }
+
             Msg::DebugStart => {
-                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
+                if let Some((runner, text_model)) = zip_code_runner_and_text_model() {
                     runner.send_message(CodeRunnerMsg::DebugAction(DebugAction::Start(
                         text_model.get_value(),
                     )));
                 }
             }
             Msg::DebugStep => {
-                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
+                if let Some((runner, text_model)) = zip_code_runner_and_text_model() {
                     runner.send_message(CodeRunnerMsg::DebugAction(DebugAction::Step(
                         text_model.get_value(),
                     )));
@@ -121,14 +121,7 @@ impl Component for App {
                 }
             }
         }
-        false
-    }
-}
 
-impl App {
-    fn zip_code_runner_and_text_model(&self) -> Option<(&Scope<CodeRunner>, &TextModel)> {
-        self.code_runner_scope
-            .as_ref()
-            .zip(self.text_model.as_ref())
+        false
     }
 }

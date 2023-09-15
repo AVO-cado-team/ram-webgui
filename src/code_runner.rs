@@ -141,6 +141,7 @@ impl Component for CodeRunner {
             (debug @ Some((WaitOnContinue, _)), _) => debug,
             (_, DebugAction::StepInner(_)) => panic!("Dispatched `DebugStepInner` without `debug_start`"),
         };
+
         true
     }
 }
