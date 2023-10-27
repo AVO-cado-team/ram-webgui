@@ -18,6 +18,7 @@ use crate::utils::after_hydration::HydrationGate;
 pub struct App {
     memory: Registers<i64>,
     text_model: Option<TextModel>,
+    // todo: change to props and store like `current_code_runner_mesage`
     code_runner_scope: Option<Scope<CodeRunner>>,
     breakpoints: HashSet<usize>,
     read_only: bool,
