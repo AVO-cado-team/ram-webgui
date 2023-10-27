@@ -942,11 +942,11 @@ function __wbg_get_imports() {
         const ret = makeMutClosure(arg0, arg1, 25, __wbg_adapter_21);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper1226 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper1228 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 25, __wbg_adapter_26);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper2110 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper2112 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 25, __wbg_adapter_29);
         return addHeapObject(ret);
     };
@@ -989,7 +989,7 @@ async function __wbg_init(input) {
     if (wasm !== undefined) return wasm;
 
     if (typeof input === 'undefined') {
-        input = new URL('ram-webgui-5304aa3d14c2c834_bg.wasm', import.meta.url);
+        input = new URL('ram-webgui-f99170178f06f9d_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 
