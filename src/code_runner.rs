@@ -13,7 +13,7 @@ use ramemu::ram::Ram;
 use ramemu::ram::RamState;
 use ramemu::registers::Registers;
 
-use yew::{html::Scope, prelude::*};
+use yew::prelude::*;
 
 use std::time::Duration;
 
@@ -55,10 +55,11 @@ use StateKind::{Pause, WaitOnContinue};
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-    pub set_memory: Callback<Registers<i64>>,
-    pub set_scope: Callback<Scope<CodeRunner>>,
+    pub memory_setter: Callback<Registers<i64>>,
+    pub dispatch_setter: Callback<Callback<DebugAction>>,
     pub breakpoints: HashSet<usize>,
-    pub set_read_only: Callback<bool>,
+    pub read_only_setter: Callback<bool>,
+    pub line_setter: Callback<usize>,
 }
 
 pub struct CodeRunner {
@@ -90,7 +91,9 @@ impl Component for CodeRunner {
     }
 
     fn create(ctx: &Context<Self>) -> Self {
-        ctx.props().set_scope.emit(ctx.link().clone());
+        ctx.props()
+            .dispatch_setter
+            .emit(ctx.link().callback(|d| Msg::DebugAction(d)));
 
         let reader = CustomReader::new("");
 
@@ -104,8 +107,10 @@ impl Component for CodeRunner {
     }
 
     fn changed(&mut self, ctx: &Context<Self>, old_props: &Self::Properties) -> bool {
-        if ctx.props().set_scope != old_props.set_scope {
-            ctx.props().set_scope.emit(ctx.link().clone());
+        if ctx.props().dispatch_setter != old_props.dispatch_setter {
+            ctx.props()
+                .dispatch_setter
+                .emit(ctx.link().callback(|d| Msg::DebugAction(d)));
         }
 
         false
@@ -170,7 +175,7 @@ impl CodeRunner {
                     Box::new(self.writer.clone()),
                 );
 
-                ctx.props().set_read_only.emit(true);
+                ctx.props().read_only_setter.emit(true);
 
                 ctx.link().send_message(Msg::DebugAction(message));
                 Some((state, ram))
@@ -186,13 +191,12 @@ impl CodeRunner {
     fn debug_step(&self, ctx: &Context<Self>, mut ram: Ram) -> State {
         log::info!("Debug Step");
 
-        if ram.next().is_some() {
-            let state: RamState = ram.as_ref().into();
-
-            ctx.props().set_memory.emit(state.registers);
-            // ctx.props().set_line.emit(state.line);
-        } else {
-            ctx.link().send_message(Msg::DebugAction(DebugAction::Stop));
+        match ram.next() {
+            Some(state) => {
+                ctx.props().memory_setter.emit(state.registers);
+                ctx.props().line_setter.emit(state.line);
+            }
+            None => ctx.link().send_message(Msg::DebugAction(DebugAction::Stop)),
         }
 
         Some((Pause, ram))
@@ -216,12 +220,14 @@ impl CodeRunner {
                 kind = WaitOnContinue;
                 async move {
                     sleep(DELAY_BETWEEN_STEPS).await;
-                    scope.send_message(Msg::DebugAction(DebugAction::ContinueChain(private::PrivateZst)));
+                    scope.send_message(Msg::DebugAction(DebugAction::ContinueChain(
+                        private::PrivateZst,
+                    )));
                 }
             }),
         };
         let state: RamState = ram.as_ref().into();
-        ctx.props().set_memory.emit(state.registers);
+        ctx.props().memory_setter.emit(state.registers);
         // ctx.props().set_line.emit(state.line);
 
         Some((kind, ram))
@@ -235,8 +241,8 @@ impl CodeRunner {
         let state: RamState = ram.into();
         self.error = state.error.map(OutputComponentErrors::InterpretError);
 
-        ctx.props().set_read_only.emit(false);
-        ctx.props().set_memory.emit(state.registers);
+        ctx.props().read_only_setter.emit(false);
+        ctx.props().memory_setter.emit(state.registers);
         // ctx.props().set_line.emit(state.line);
         None
     }

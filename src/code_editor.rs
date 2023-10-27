@@ -53,6 +53,7 @@ pub struct Props {
     pub run_code: Callback<()>,
     pub read_only: bool,
     pub set_text_model: Callback<TextModel>,
+    pub line: usize,
 }
 
 pub enum Msg {
@@ -68,7 +69,6 @@ pub struct CustomEditor {
     text_model: TextModel,
 }
 
-//  WARN:
 /// # Panics
 /// Panics if rendered before hydration.
 impl Component for CustomEditor {
@@ -80,6 +80,7 @@ impl Component for CustomEditor {
 
         let on_editor_created = ctx.link().callback(Msg::EditorCreated);
 
+        // todo(ic-it): use `ctx.props().line()` to highlight current line in debug mode
         html! {
           <div id="container" class="editor-container" ref={self.editor_ref.clone()}>
               <CodeEditor
