@@ -28,7 +28,7 @@ strip = "debuginfo"
 opt-level = 3
 
 [dependencies]
-yew = { version = "0.20", features = ["csr"] }
+yew = { version = "0.21", features = ["csr"] }
 wasm-bindgen = "0.2.84"
 js-sys = "0.3.61"
 wasm-logger = "0.2.0"
@@ -37,6 +37,7 @@ urlencoding = "2.1.2"
 console_error_panic_hook = "0.1.7"
 futures = { version = "0.3.28", optional = true }
 wasm-bindgen-futures = "0.4.37"
+gloo = "0.11.0"
 
 [dependencies.web-sys]
 version = "0.3.61"
@@ -44,7 +45,7 @@ features = ['Document', 'Window', 'Element', 'HtmlElement', 'Node', 'CssStyleDec
 
 [dependencies.monaco]
 git = "https://github.com/siku2/rust-monaco/"
-rev = "794a4cc7819f9ed7eb06559e24f75a41e23cf22a"
+rev = "bbc6523c0f97786a22d76ced650e6b31a1971f7a"
 features = ["yew", "yew-components"]
 
 [dependencies.ramemu]

@@ -5,9 +5,9 @@ use crate::io::custom_writer::CustomWriter;
 use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 use crate::io::output::OutputComponentErrors;
-use crate::utils::save_to_local_storage;
-use crate::utils::sleep;
 
+use gloo::storage::LocalStorage;
+use gloo::storage::Storage;
 use ramemu::program::Program;
 use ramemu::ram::Ram;
 use ramemu::ram::RamState;
@@ -126,7 +126,9 @@ impl Component for CodeRunner {
             }
             Msg::InputChanged(data) => {
                 log::info!("Input changed, {}", &data);
-                save_to_local_storage("stdin", &data);
+                if let Err(err) = LocalStorage::set("stdin", &data) {
+                    log::error!("Failed to save code: {err}");
+                }
                 self.reader.set_input(&data);
                 return true;
             }
@@ -219,7 +221,7 @@ impl CodeRunner {
                 let scope = ctx.link().clone();
                 kind = WaitOnContinue;
                 async move {
-                    sleep(DELAY_BETWEEN_STEPS).await;
+                    yew::platform::time::sleep(DELAY_BETWEEN_STEPS).await;
                     scope.send_message(Msg::DebugAction(DebugAction::ContinueChain(
                         private::PrivateZst,
                     )));

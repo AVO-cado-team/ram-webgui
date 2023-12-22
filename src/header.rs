@@ -1,6 +1,6 @@
-use crate::utils::use_event_listener;
+use gloo::events::EventListener;
 use wasm_bindgen::JsCast;
-use web_sys::{window as get_window, Node, Window};
+use web_sys::Node;
 use yew::prelude::*;
 
 use crate::about_popup::AboutPopup;
@@ -17,37 +17,43 @@ pub struct Props {
 pub fn header(props: &Props) -> Html {
     let popup_ref = use_node_ref();
     let popup_button_ref = use_node_ref();
-    let window = use_state(|| None::<Window>);
-    let window_clone = window.clone();
+    let show_popup = use_state_eq(|| false);
+    let event_listener = use_state(|| None);
 
-    use_effect_with_deps(move |_| window_clone.set(Some(get_window().unwrap())), ());
+    let callback = use_callback(
+        (
+            show_popup.clone(),
+            popup_ref.clone(),
+            popup_button_ref.clone(),
+        ),
+        |event: web_sys::MouseEvent, (show_popup, popup_ref, about_us)| {
+            let (popup_element, about_us) = popup_ref.get().zip(about_us.get())?;
+            let target_host = event.target()?;
+            let target = target_host.dyn_ref::<Node>();
+            show_popup.set(popup_element.contains(target) || about_us.contains(target));
+            Some(())
+        },
+    );
+
+    use_effect_with(
+        (event_listener.setter(), callback),
+        move |(event_listener, callback)| {
+            let callback = callback.clone();
+            let window = gloo::utils::window();
+            let handle = EventListener::new(&window, "click", move |event| {
+                if let Some(event) = event.dyn_ref::<web_sys::MouseEvent>() {
+                    callback.emit(event.clone());
+                }
+            });
+            event_listener.set(Some(handle));
+        },
+    );
 
     let on_start = props.on_run.clone();
     //  TODO: Replace Image from pause to step
     let on_step = props.on_step.clone();
     let on_stop = props.on_stop.clone();
     let on_debug = props.on_debug.clone();
-
-    let show_popup = use_state_eq(|| false);
-
-    use_event_listener(
-        "click",
-        {
-            let show_popup = show_popup.clone();
-            let popup_ref = popup_ref.clone();
-            let about_us = popup_button_ref.clone();
-
-            move |event: web_sys::MouseEvent| {
-                if let Some((popup_element, about_us)) = popup_ref.get().zip(about_us.get()) {
-                    let target_host = event.target().unwrap();
-                    let target = Some(target_host.unchecked_ref::<Node>());
-                    show_popup.set(popup_element.contains(target) || about_us.contains(target));
-                };
-            }
-        },
-        (popup_ref.clone(), popup_button_ref.clone()),
-        (*window).clone().map(|w| w.into()),
-    );
 
     html! {
       <header>
@@ -69,7 +75,7 @@ pub fn header(props: &Props) -> Html {
             <button
               onclick={move |_| show_popup.set(!*show_popup)}
               class="about-us"
-              ref={popup_button_ref.clone()}
+              ref={popup_button_ref}
             >
               {"About Us"}
             </button>

@@ -10,7 +10,7 @@ use crate::code_runner::CodeRunner;
 use crate::code_runner::DebugAction;
 use crate::header::Header;
 use crate::memory::Memory;
-use crate::utils::after_hydration::HydrationGate;
+use crate::utils::HydrationGate;
 
 #[derive(Default)]
 pub struct App {
