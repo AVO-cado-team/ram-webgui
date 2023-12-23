@@ -1,19 +1,18 @@
 use ramemu::registers::RegisterId;
-use ramemu::registers::Registers;
 use yew::prelude::*;
+use yewdux::use_selector;
+
+use crate::store::Store;
 
 const WINDOW_LENGTH: usize = 100;
 const STEP_SIZE: usize = 50;
 
-#[derive(Debug, Clone, PartialEq, Properties)]
-pub struct Props {
-    pub entries: Registers<i64>,
-}
 
-#[function_component(Memory)]
-pub fn memory(props: &Props) -> Html {
-    let registers = &props.entries;
+#[function_component]
+pub fn Memory() -> Html {
+    let registers = use_selector(|s: &Store| s.get_registers().clone());
 
+    // TODO: Should it be in store? So we can persist it?
     let starting_index = use_state(|| 0);
 
     let register_entries = (0..WINDOW_LENGTH)
@@ -26,7 +25,7 @@ pub fn memory(props: &Props) -> Html {
             }
             html! {
               <div class={class} key={index} >
-                <div class="register-num"><p>{format!("{}", index)}</p></div>
+                <div class="register-num"><p>{format!("{index}")}</p></div>
                 <div class="register-val">{value.to_string()}</div>
               </div>
             }

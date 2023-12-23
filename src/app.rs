@@ -1,36 +1,29 @@
-use std::collections::HashSet;
-
-use monaco::api::TextModel;
-use ramemu::registers::Registers;
+use std::rc::Rc;
 
 use yew::prelude::*;
+use yewdux::prelude::*;
 
-use crate::code_editor::CustomEditor;
-use crate::code_runner::CodeRunner;
-use crate::code_runner::DebugAction;
-use crate::header::Header;
-use crate::memory::Memory;
-use crate::utils::HydrationGate;
+use crate::{
+    code_editor::CustomEditor,
+    code_runner::{CodeRunner, DebugAction},
+    header::Header,
+    memory::Memory,
+    store::Store,
+    utils::HydrationGate,
+};
 
-#[derive(Default)]
 pub struct App {
-    memory: Registers<i64>,
-    text_model: Option<TextModel>,
-    code_runner_dispatch: Option<Callback<DebugAction>>,
-    breakpoints: HashSet<usize>,
-    read_only: bool,
-    line: usize
+    code_runner_dispatch: Callback<DebugAction>,
+    store: Rc<Store>,
+    _dispatch: Dispatch<Store>,
 }
 
 pub enum Msg {
     SetRunnerDispatch(Callback<DebugAction>),
-    SetMemory(Registers<i64>),
     DebugStop,
     DebugStep,
     DebugStart,
-    SetReadOnly(bool),
-    SetTextModel(TextModel),
-    SetLine(usize)
+    SetStore(Rc<Store>),
 }
 
 impl Component for App {
@@ -39,15 +32,17 @@ impl Component for App {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let run_code = ctx.link().callback(|()| Msg::DebugStart);
-        let set_read_only = ctx.link().callback(Msg::SetReadOnly);
 
         let on_run = ctx.link().callback(|()| Msg::DebugStart);
         let on_stop = ctx.link().callback(|()| Msg::DebugStop);
         let on_step = ctx.link().callback(|()| Msg::DebugStep);
         let on_debug = ctx.link().callback(|()| Msg::DebugStart);
+        let store = &self.store;
 
-        let set_text_model = ctx.link().callback(Msg::SetTextModel);
         let editor_placeholder = html! {<div id="container" class="editor-container placeholder"/>};
+        let line = store.current_debug_line;
+        let read_only = store.read_only;
+        let text_model = store.get_model().clone();
 
         html! {
           <main id="ram-web">
@@ -56,71 +51,50 @@ impl Component for App {
               <div class="interface">
                   <div class="editor-registers">
                       <HydrationGate placeholder={editor_placeholder}>
-                          <CustomEditor
-                              read_only={self.read_only}
-                              set_text_model={set_text_model}
-                              run_code={run_code}
-                              line={self.line}
-                          />
+                          <CustomEditor {text_model} {read_only} {run_code} {line} />
                       </HydrationGate>
-                      <Memory entries={self.memory.clone()} />
+                      <Memory />
                   </div>
               </div>
 
-              <CodeRunner
-                  memory_setter={ctx.link().callback(Msg::SetMemory)}
-                  dispatch_setter={ctx.link().callback(Msg::SetRunnerDispatch)}
-                  breakpoints={self.breakpoints.clone()}
-                  read_only_setter={set_read_only}
-                  line_setter={ctx.link().callback(Msg::SetLine)}
-              />
+              <CodeRunner dispatch_setter={ctx.link().callback(Msg::SetRunnerDispatch)} />
 
           </main>
         }
     }
 
-    fn create(_ctx: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         log::info!("App Created");
-        Self::default()
+
+        let on_change = ctx.link().callback(Msg::SetStore);
+        let dispatch = Dispatch::global().subscribe(on_change);
+
+        Self {
+            code_runner_dispatch: Default::default(),
+            store: dispatch.get(),
+            _dispatch: dispatch,
+        }
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-        let zip_dispatch_and_text_model = || {
-            self.code_runner_dispatch
-                .as_ref()
-                .zip(self.text_model.as_ref())
-        };
-
+        let text_model = &self.store.get_model();
         match msg {
-            Msg::SetRunnerDispatch(dispatch) => self.code_runner_dispatch = Some(dispatch),
-            Msg::SetReadOnly(read_only) => self.read_only = read_only,
-            Msg::SetLine(line) => {
-                self.line = line;
-                return true;
-            }
-            Msg::SetMemory(memory) => {
-                self.memory = memory;
-                return true;
-            }
-            Msg::SetTextModel(text_model) => {
-                self.text_model = Some(text_model);
+            Msg::SetRunnerDispatch(dispatch) => self.code_runner_dispatch = dispatch,
+            Msg::SetStore(store) => {
+                self.store = store;
                 return true;
             }
 
             Msg::DebugStart => {
-                if let Some((dispatch, text_model)) = zip_dispatch_and_text_model() {
-                    dispatch.emit(DebugAction::Start(text_model.get_value()));
-                }
+                self.code_runner_dispatch
+                    .emit(DebugAction::Start(text_model.get_value()));
             }
             Msg::DebugStep => {
-                if let Some((dispatch, text_model)) = zip_dispatch_and_text_model() {
-                    dispatch.emit(DebugAction::Step(text_model.get_value()));
-                }
+                self.code_runner_dispatch
+                    .emit(DebugAction::Step(text_model.get_value()));
             }
             Msg::DebugStop => {
-                if let Some(dispatch) = &self.code_runner_dispatch {
-                    dispatch.emit(DebugAction::Stop);
-                }
+                self.code_runner_dispatch.emit(DebugAction::Stop);
             }
         }
 

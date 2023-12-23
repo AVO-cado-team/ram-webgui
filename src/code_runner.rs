@@ -1,19 +1,20 @@
-use std::collections::HashSet;
+use std::rc::Rc;
 
 use crate::io::custom_reader::CustomReader;
 use crate::io::custom_writer::CustomWriter;
 use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 use crate::io::output::OutputComponentErrors;
+use crate::store::Store;
 
 use gloo::storage::LocalStorage;
 use gloo::storage::Storage;
 use ramemu::program::Program;
 use ramemu::ram::Ram;
 use ramemu::ram::RamState;
-use ramemu::registers::Registers;
 
 use yew::prelude::*;
+use yewdux::Dispatch;
 
 use std::time::Duration;
 
@@ -31,6 +32,7 @@ pub enum Msg {
     WriterWrote(String),
     InputChanged(String),
     DebugAction(DebugAction),
+    SetStore(Rc<Store>),
 }
 
 #[derive(Debug)]
@@ -55,11 +57,7 @@ use StateKind::{Pause, WaitOnContinue};
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-    pub memory_setter: Callback<Registers<i64>>,
     pub dispatch_setter: Callback<Callback<DebugAction>>,
-    pub breakpoints: HashSet<usize>,
-    pub read_only_setter: Callback<bool>,
-    pub line_setter: Callback<usize>,
 }
 
 pub struct CodeRunner {
@@ -68,6 +66,8 @@ pub struct CodeRunner {
     reader: CustomReader,
     writer: CustomWriter,
     debug: State,
+    store: Rc<Store>,
+    _dispatch: Dispatch<Store>,
 }
 
 impl Component for CodeRunner {
@@ -97,12 +97,17 @@ impl Component for CodeRunner {
 
         let reader = CustomReader::new("");
 
+        let on_change = ctx.link().callback(Msg::SetStore);
+        let dispatch = Dispatch::global().subscribe(on_change);
+
         Self {
             error: None,
             debug: None,
             stdout: Default::default(),
             reader,
             writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
+            store: dispatch.get(),
+            _dispatch: dispatch,
         }
     }
 
@@ -118,6 +123,10 @@ impl Component for CodeRunner {
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         let action = match msg {
+            Msg::SetStore(store) => {
+                self.store = store;
+                return true;
+            }
             Msg::DebugAction(action) => action,
             Msg::WriterWrote(data) => {
                 self.stdout.push_str(&data);
@@ -177,7 +186,7 @@ impl CodeRunner {
                     Box::new(self.writer.clone()),
                 );
 
-                ctx.props().read_only_setter.emit(true);
+                Dispatch::global().reduce_mut(|s: &mut Store| s.read_only = true);
 
                 ctx.link().send_message(Msg::DebugAction(message));
                 Some((state, ram))
@@ -195,8 +204,12 @@ impl CodeRunner {
 
         match ram.next() {
             Some(state) => {
-                ctx.props().memory_setter.emit(state.registers);
-                ctx.props().line_setter.emit(state.line);
+                let registers = state.registers;
+                let line = state.line;
+                Dispatch::global().reduce_mut(|s: &mut Store| {
+                    s.set_registers(registers);
+                    s.current_debug_line = line;
+                });
             }
             None => ctx.link().send_message(Msg::DebugAction(DebugAction::Stop)),
         }
@@ -208,7 +221,7 @@ impl CodeRunner {
     fn debug_continue(&self, ctx: &Context<Self>, mut ram: Ram) -> State {
         log::info!("Debug Continue");
 
-        let breakpoints = &ctx.props().breakpoints;
+        let breakpoints = &self.store.breakpoints;
         let kind;
 
         match ram.next() {
@@ -229,13 +242,18 @@ impl CodeRunner {
             }),
         };
         let state: RamState = ram.as_ref().into();
-        ctx.props().memory_setter.emit(state.registers);
-        // ctx.props().set_line.emit(state.line);
+        let registers = state.registers;
+        let line = state.line;
+
+        Dispatch::global().reduce_mut(|s: &mut Store| {
+            s.set_registers(registers);
+            s.current_debug_line = line;
+        });
 
         Some((kind, ram))
     }
 
-    fn debug_stop(&mut self, ctx: &Context<Self>, debug: State) -> State {
+    fn debug_stop(&mut self, _ctx: &Context<Self>, debug: State) -> State {
         log::info!("Debug Stop");
 
         let (_, ram) = debug?;
@@ -243,9 +261,15 @@ impl CodeRunner {
         let state: RamState = ram.into();
         self.error = state.error.map(OutputComponentErrors::InterpretError);
 
-        ctx.props().read_only_setter.emit(false);
-        ctx.props().memory_setter.emit(state.registers);
-        // ctx.props().set_line.emit(state.line);
+        let registers = state.registers;
+        let line = state.line;
+
+        Dispatch::global().reduce_mut(|s: &mut Store| {
+            s.set_registers(registers);
+            s.read_only = false;
+            s.current_debug_line = line;
+        });
+
         None
     }
 }

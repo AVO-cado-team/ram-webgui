@@ -9,6 +9,7 @@ mod io;
 mod memory;
 mod monaco_ram;
 mod utils;
+mod store;
 
 use std::panic::{self, PanicInfo};
 

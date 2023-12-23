@@ -9,7 +9,7 @@ use monaco::sys::editor::IModelContentChangedEvent;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 
-const DEFAULT_CODE: &str = r"
+pub const DEFAULT_CODE: &str = r"
 read 1
 write 1
 read 2
@@ -53,8 +53,8 @@ pub fn get_editor_options(read_only: bool) -> IStandaloneEditorConstructionOptio
 pub struct Props {
     pub run_code: Callback<()>,
     pub read_only: bool,
-    pub set_text_model: Callback<TextModel>,
     pub line: usize,
+    pub text_model: TextModel,
 }
 
 pub enum Msg {
@@ -67,7 +67,6 @@ pub enum Msg {
 pub struct CustomEditor {
     editor: Option<CodeEditorLink>,
     editor_ref: NodeRef,
-    text_model: TextModel,
     _on_before_unload: EventListener,
     _text_model_saver: DisposableClosure<dyn FnMut(IModelContentChangedEvent)>,
 }
@@ -82,14 +81,14 @@ impl Component for CustomEditor {
         let read_only = ctx.props().read_only;
 
         let on_editor_created = ctx.link().callback(Msg::EditorCreated);
+        let model = Some(ctx.props().text_model.clone());
 
-        // todo(ic-it): use `ctx.props().line()` to highlight current line in debug mode
         html! {
           <div id="container" class="editor-container" ref={self.editor_ref.clone()}>
               <CodeEditor
                 classes={"editor"}
                 options={get_editor_options(read_only)}
-                model={self.text_model.clone()}
+                {model}
                 {on_editor_created}
               />
           </div>
@@ -101,15 +100,10 @@ impl Component for CustomEditor {
         monaco::workers::ensure_environment_set();
         register_ram();
 
-        let code: String = LocalStorage::get("code").unwrap_or_else(|_| DEFAULT_CODE.to_string());
-        let text_model = TextModel::create(code.as_str(), Some("ram"), None)
-            .expect("Failed to create text model");
-
         let link = ctx.link().clone();
+        let text_model = &ctx.props().text_model;
         let text_model_saver =
             text_model.on_did_change_content(move |_| link.send_message(Msg::SaveCode));
-
-        ctx.props().set_text_model.emit(text_model.clone());
 
         let editor_ref: NodeRef = Default::default();
         let editor = None;
@@ -125,7 +119,6 @@ impl Component for CustomEditor {
         Self {
             editor,
             editor_ref,
-            text_model,
             _on_before_unload: on_before_unload,
             _text_model_saver: text_model_saver,
         }
@@ -147,7 +140,7 @@ impl Component for CustomEditor {
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        let text_model = &self.text_model;
+        let text_model = &ctx.props().text_model;
         let run_code = &ctx.props().run_code;
 
         match msg {
