@@ -1,4 +1,3 @@
-use std::cmp::min;
 use std::io::{BufRead, Error, ErrorKind, Read, Result};
 
 use serde::{Deserialize, Serialize};
@@ -29,8 +28,9 @@ impl Read for CustomReader {
             //  TODO: wait for input
             return Err(Error::new(ErrorKind::UnexpectedEof, "No input available"));
         }
-        let len = min(buf.len(), self.input.len());
-        buf[..len].copy_from_slice(&self.input.as_bytes()[..len]);
+        let input_bytes = self.input.as_bytes();
+        let len = buf.len().min(input_bytes.len());
+        buf[..len].copy_from_slice(&input_bytes[..len]);
         Ok(len)
     }
 }
@@ -45,6 +45,6 @@ impl BufRead for CustomReader {
     }
 
     fn consume(&mut self, amt: usize) {
-        self.input.drain(..min(amt, self.input.len()));
+        self.input.drain(..amt.min(self.input.as_bytes().len()));
     }
 }
