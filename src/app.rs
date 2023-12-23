@@ -36,7 +36,6 @@ impl Component for App {
         let on_run = ctx.link().callback(|()| Msg::DebugStart);
         let on_stop = ctx.link().callback(|()| Msg::DebugStop);
         let on_step = ctx.link().callback(|()| Msg::DebugStep);
-        let on_debug = ctx.link().callback(|()| Msg::DebugStart);
         let store = &self.store;
 
         let editor_placeholder = html! {<div id="container" class="editor-container placeholder"/>};
@@ -46,7 +45,7 @@ impl Component for App {
 
         html! {
           <main id="ram-web">
-              <Header {on_run} {on_step} {on_stop} {on_debug} />
+              <Header {on_run} {on_step} {on_stop} />
 
               <div class="interface">
                   <div class="editor-registers">

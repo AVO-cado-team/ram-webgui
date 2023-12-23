@@ -10,7 +10,6 @@ pub struct Props {
     pub on_run: Callback<()>,
     pub on_step: Callback<()>,
     pub on_stop: Callback<()>,
-    pub on_debug: Callback<()>,
 }
 
 #[function_component(Header)]
@@ -53,7 +52,6 @@ pub fn header(props: &Props) -> Html {
     //  TODO: Replace Image from pause to step
     let on_step = props.on_step.clone();
     let on_stop = props.on_stop.clone();
-    let on_debug = props.on_debug.clone();
 
     html! {
       <header>
@@ -69,7 +67,6 @@ pub fn header(props: &Props) -> Html {
             <button onclick={move |_| on_start.emit(())} class="control-btn"><div class="compile-btn"/></button>
             <button onclick={move |_| on_step.emit(())} class="control-btn"><div class="pause-btn"/></button>
             <button onclick={move |_| on_stop.emit(())} class="control-btn"><div class="stop-btn"/></button>
-            <button onclick={move |_| on_debug.emit(())} class="control-btn"><div class="debug-btn"/></button>
           </div>
           <div class="help">
             <button
