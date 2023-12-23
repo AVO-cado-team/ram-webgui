@@ -58,6 +58,7 @@ pub struct Props {
 
 pub enum Msg {
     EditorCreated(CodeEditorLink),
+    ToggleBreakpoint(usize),
     DownloadCode,
     CommentCode,
 }
@@ -180,6 +181,15 @@ impl Component for CustomEditor {
                 code_runner.forget();
                 downloader.forget();
                 commenter.forget();
+            }
+            Msg::ToggleBreakpoint(line) => {
+                Dispatch::global().reduce_mut(move |s: &mut Store| {
+                    if s.breakpoints.contains(&line) {
+                        s.breakpoints.remove(&line);
+                    } else {
+                        s.breakpoints.insert(line);
+                    }
+                });
             }
         }
         false
