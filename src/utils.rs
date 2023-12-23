@@ -48,30 +48,22 @@ fn get_selection_or_cursor_range(ieditor: &ICodeEditor) -> Option<Range> {
     }
 }
 
-fn prepare_new_text(lines: Vec<&str>) -> (String, bool) {
-    type callback = Box<dyn Fn(&str) -> String>;
-    let (toggler, do_comment): (callback, bool) = if lines.iter().all(|l| l.starts_with('#')) {
-        (Box::new(|line: &str| String::from(&line[1..])), false)
-    } else {
-        (Box::new(|line: &str| format!("#{line}")), true)
-    };
-
-    let new_text = lines
-        .into_iter()
-        .map(|line| toggler(line))
-        .collect::<Vec<String>>()
-        .join("\n");
-    (new_text, do_comment)
-}
-
 pub fn comment_code(editor: &CodeEditor, model: &TextModel) -> Result<(), ()> {
     let ieditor: &ICodeEditor = editor.as_ref();
     let range = get_selection_or_cursor_range(ieditor).ok_or(())?;
 
     let itext_model: &ITextModel = model.as_ref();
     let text = itext_model.get_value_in_range(&range.clone().unchecked_into(), None);
-    let lines: Vec<&str> = text.lines().collect();
-    let (new_text, do_comment) = prepare_new_text(lines);
+
+    let (new_text, do_comment) = {
+        match text.lines().map(|l| l.strip_prefix('#')).collect::<Option<Vec<_>>>() {
+            Some(lines) => (lines.join("\n"), false),
+            None => {
+                let lines: Vec<_> = text.lines().map(|l| format!("#{l}")).collect();
+                (lines.join("\n"), true)
+            }
+        }
+    };
 
     let edits = Array::new();
     let edit = Object::new().unchecked_into::<IIdentifiedSingleEditOperation>();
@@ -92,8 +84,7 @@ pub fn comment_code(editor: &CodeEditor, model: &TextModel) -> Result<(), ()> {
         let column = column + if do_comment { 1.0 } else { -1.0 };
         let column = column.max(1.0);
         let new_position = Position::new(line_number, column);
-        let iposition = <Position as AsRef<Position>>::as_ref(&new_position);
-        ieditor.set_position(iposition.unchecked_ref());
+        ieditor.set_position(new_position.unchecked_ref());
     };
     Ok(())
 }
