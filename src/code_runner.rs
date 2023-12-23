@@ -7,8 +7,6 @@ use crate::io::output::OutputComponent;
 use crate::io::output::OutputComponentErrors;
 use crate::store::Store;
 
-use gloo::storage::LocalStorage;
-use gloo::storage::Storage;
 use ramemu::program::Program;
 use ramemu::ram::Ram;
 use ramemu::ram::RamState;
@@ -30,7 +28,6 @@ const DELAY_BETWEEN_STEPS: Duration = Duration::from_millis(10);
 
 pub enum Msg {
     WriterWrote(String),
-    InputChanged(String),
     DebugAction(DebugAction),
     SetStore(Rc<Store>),
 }
@@ -63,7 +60,6 @@ pub struct Props {
 pub struct CodeRunner {
     error: Option<OutputComponentErrors>,
     stdout: String,
-    reader: CustomReader,
     writer: CustomWriter,
     debug: State,
     store: Rc<Store>,
@@ -74,18 +70,14 @@ impl Component for CodeRunner {
     type Message = Msg;
     type Properties = Props;
 
-    fn view(&self, ctx: &Context<Self>) -> Html {
-        let on_input_changed = ctx.link().callback(Msg::InputChanged);
-
+    fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
             <div class="console-container">
               <OutputComponent
                 error={self.error.clone()}
                 output={self.stdout.clone()}
               />
-              <InputComponent
-                on_change={on_input_changed}
-              />
+              <InputComponent />
           </div>
         }
     }
@@ -95,8 +87,6 @@ impl Component for CodeRunner {
             .dispatch_setter
             .emit(ctx.link().callback(|d| Msg::DebugAction(d)));
 
-        let reader = CustomReader::new("");
-
         let on_change = ctx.link().callback(Msg::SetStore);
         let dispatch = Dispatch::global().subscribe(on_change);
 
@@ -104,7 +94,6 @@ impl Component for CodeRunner {
             error: None,
             debug: None,
             stdout: Default::default(),
-            reader,
             writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
             store: dispatch.get(),
             _dispatch: dispatch,
@@ -131,14 +120,6 @@ impl Component for CodeRunner {
             Msg::WriterWrote(data) => {
                 self.stdout.push_str(&data);
                 self.stdout.push('\n');
-                return true;
-            }
-            Msg::InputChanged(data) => {
-                log::info!("Input changed, {}", &data);
-                if let Err(err) = LocalStorage::set("stdin", &data) {
-                    log::error!("Failed to save code: {err}");
-                }
-                self.reader.set_input(&data);
                 return true;
             }
         };
@@ -182,7 +163,7 @@ impl CodeRunner {
             Ok(program) => {
                 let ram = Ram::new(
                     program,
-                    Box::new(self.reader.clone()),
+                    Box::new(CustomReader::new(&self.store.stdin)),
                     Box::new(self.writer.clone()),
                 );
 

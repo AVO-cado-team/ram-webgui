@@ -1,9 +1,6 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
-use gloo::events::EventListener;
-use gloo::storage::LocalStorage;
-use gloo::storage::Storage;
 use monaco::api::DisposableClosure;
 use monaco::sys::editor::IModelContentChangedEvent;
 use wasm_bindgen::closure::Closure;
@@ -27,9 +24,11 @@ use monaco::{
     yew::{CodeEditor, CodeEditorLink},
 };
 use yew::prelude::*;
+use yewdux::Dispatch;
 
 use crate::monaco_ram::register_ram;
 use crate::monaco_ram::{LANG_ID, THEME};
+use crate::store::Store;
 use crate::utils::comment_code;
 use crate::utils::download_code;
 
@@ -59,7 +58,6 @@ pub struct Props {
 
 pub enum Msg {
     EditorCreated(CodeEditorLink),
-    SaveCode,
     DownloadCode,
     CommentCode,
 }
@@ -67,7 +65,6 @@ pub enum Msg {
 pub struct CustomEditor {
     editor: Option<CodeEditorLink>,
     editor_ref: NodeRef,
-    _on_before_unload: EventListener,
     _text_model_saver: DisposableClosure<dyn FnMut(IModelContentChangedEvent)>,
 }
 
@@ -84,7 +81,7 @@ impl Component for CustomEditor {
         let model = Some(ctx.props().text_model.clone());
 
         html! {
-          <div id="container" class="editor-container" ref={self.editor_ref.clone()}>
+          <div id="container" class="editor-container" ref={&self.editor_ref}>
               <CodeEditor
                 classes={"editor"}
                 options={get_editor_options(read_only)}
@@ -100,26 +97,17 @@ impl Component for CustomEditor {
         monaco::workers::ensure_environment_set();
         register_ram();
 
-        let link = ctx.link().clone();
-        let text_model = &ctx.props().text_model;
-        let text_model_saver =
-            text_model.on_did_change_content(move |_| link.send_message(Msg::SaveCode));
-
         let editor_ref: NodeRef = Default::default();
         let editor = None;
 
-        let text_model_clone = text_model.clone();
-        let on_before_unload =
-            EventListener::new(&gloo::utils::window(), "beforeunload", move |_| {
-                if let Err(err) = LocalStorage::set("code", text_model_clone.get_value()) {
-                    log::error!("Failed to save code: {err:?}");
-                }
-            });
+        let text_model = &ctx.props().text_model;
+        let text_model_saver = text_model.on_did_change_content(move |_| {
+            Dispatch::global().reduce_mut(move |s: &mut Store| s.change_model());
+        });
 
         Self {
             editor,
             editor_ref,
-            _on_before_unload: on_before_unload,
             _text_model_saver: text_model_saver,
         }
     }
@@ -154,12 +142,6 @@ impl Component for CustomEditor {
                     editor.with_editor(|editor| comment_code(editor, text_model));
                 }
             }
-            Msg::SaveCode => {
-                log::info!("Saving!");
-                if let Err(err) = LocalStorage::set("code", text_model.get_value()) {
-                    log::error!("Failed to save code: {err}");
-                }
-            }
             Msg::EditorCreated(editor_link) => {
                 static EDITOR_WAS_CREATED: AtomicBool = AtomicBool::new(false);
 
@@ -184,7 +166,6 @@ impl Component for CustomEditor {
                     let code_runner = code_runner.as_ref().unchecked_ref();
                     let downloader = downloader.as_ref().unchecked_ref();
                     let commenter = commenter.as_ref().unchecked_ref();
-                    ctx.link().send_message(Msg::SaveCode);
 
                     let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
                     raw_editor.add_command(run_code.into(), code_runner, None);

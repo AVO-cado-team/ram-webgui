@@ -1,7 +1,9 @@
 use std::cmp::min;
 use std::io::{BufRead, Error, ErrorKind, Read, Result};
 
-#[derive(Debug, Default, Clone, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CustomReader {
     input: String,
 }

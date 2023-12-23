@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use gloo::storage::{LocalStorage, Storage};
 use monaco::api::TextModel;
 use ramemu::registers::Registers;
 use serde::{Deserialize, Serialize};
@@ -9,11 +8,14 @@ use yewdux::prelude::*;
 use crate::code_editor::DEFAULT_CODE;
 
 #[derive(Default, PartialEq, Store, Clone, Serialize, Deserialize)]
+#[store(storage = "local")]
 pub struct Store {
     pub breakpoints: HashSet<usize>,
     pub read_only: bool,
     pub current_debug_line: usize,
-    regisers: RegistersWrapper,
+    pub stdin: String,
+    #[serde(skip)]
+    registers: Registers<i64>,
     text_model: TextModelWrapper,
 }
 
@@ -21,19 +23,25 @@ impl Store {
     pub fn get_model(&self) -> &TextModel {
         &self.text_model.0
     }
-    pub fn set_model(&mut self, model: TextModel) {
-        self.text_model = TextModelWrapper(model);
+    pub fn change_model(&mut self) {
+        self.text_model.1 = self.text_model.1.wrapping_add(1);
     }
     pub fn get_registers(&self) -> &Registers<i64> {
-        &self.regisers.0
+        &self.registers
     }
     pub fn set_registers(&mut self, registers: Registers<i64>) {
-        self.regisers = RegistersWrapper(registers);
+        self.registers = registers;
     }
 }
 
-#[derive(PartialEq, Clone)]
-struct TextModelWrapper(TextModel);
+#[derive(Clone)]
+struct TextModelWrapper(TextModel, u64);
+
+impl PartialEq for TextModelWrapper {
+    fn eq(&self, other: &Self) -> bool {
+        self.1 == other.1
+    }
+}
 
 impl Serialize for TextModelWrapper {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -50,30 +58,14 @@ impl<'de> Deserialize<'de> for TextModelWrapper {
             gloo::console::error!("Failded to create text model: ", js_err);
             serde::de::Error::custom("Failed to deserialize text model")
         })?;
-        Ok(Self(text_model))
+        Ok(Self(text_model, 0))
     }
 }
 
 impl Default for TextModelWrapper {
     fn default() -> Self {
-        let code: String = LocalStorage::get("code").unwrap_or_else(|_| DEFAULT_CODE.to_string());
-        let text_model = TextModel::create(code.as_str(), Some("ram"), None)
+        let text_model = TextModel::create(DEFAULT_CODE, Some("ram"), None)
             .expect("Failed to create text model");
-        Self(text_model)
-    }
-}
-
-#[derive(PartialEq, Clone, Default)]
-struct RegistersWrapper(Registers<i64>);
-
-impl Serialize for RegistersWrapper {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.collect_seq(std::collections::HashMap::<(), ()>::default())
-    }
-}
-
-impl<'de> Deserialize<'de> for RegistersWrapper {
-    fn deserialize<D: serde::Deserializer<'de>>(_: D) -> Result<Self, D::Error> {
-        Ok(Self(Registers::default()))
+        Self(text_model, 0)
     }
 }
