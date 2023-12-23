@@ -16,8 +16,8 @@ pub struct Props {
 #[function_component(OutputComponent)]
 pub fn output_component(props: &Props) -> Html {
     let output = match &props.error {
-        Some(OutputComponentErrors::InterpretError(err)) => format!("{:?}", err),
-        Some(OutputComponentErrors::ParseError(err)) => format!("{:?}", err),
+        Some(OutputComponentErrors::InterpretError(err)) => format!("{err:?}"),
+        Some(OutputComponentErrors::ParseError(err)) => format!("{err:?}"),
         None => props.output.to_string(),
     };
     html! {

@@ -7,12 +7,10 @@ pub struct Props {
 
 #[function_component(AboutPopup)]
 pub fn about_popup(props: &Props) -> Html {
-    let window = web_sys::window().expect("no global `window` exists");
-    let document = window.document().expect("should have a document on window");
-    let body = document.body().expect("should have a body on document");
+    let body = gloo::utils::body();
 
     let popup = html! {
-      <div class="about-popup" ref={props.popup_ref.clone()}>
+      <div class="about-popup" ref={&props.popup_ref}>
           <div class="about-us-block">
               <div class="about-info-block">
                 <h1>{ "About project" }</h1>

@@ -1,35 +1,29 @@
-use std::collections::HashSet;
+use std::rc::Rc;
 
-use monaco::api::TextModel;
-use ramemu::registers::Registers;
-
-use yew::html::Scope;
 use yew::prelude::*;
+use yewdux::prelude::*;
 
-use crate::code_editor::CustomEditor;
-use crate::code_runner::CodeRunner;
-use crate::code_runner::Msg as CodeRunnerMsg;
-use crate::header::Header;
-use crate::memory::Memory;
-use crate::utils::after_hydration::HydrationGate;
+use crate::{
+    code_editor::CustomEditor,
+    code_runner::{CodeRunner, DebugAction},
+    header::Header,
+    memory::Memory,
+    store::Store,
+    utils::HydrationGate,
+};
 
 pub struct App {
-    memory: Registers<i64>,
-    text_model: Option<TextModel>,
-    code_runner_scope: Option<Scope<CodeRunner>>,
-    breakpoints: HashSet<usize>,
-    read_only: bool,
+    code_runner_dispatch: Callback<DebugAction>,
+    store: Rc<Store>,
+    _dispatch: Dispatch<Store>,
 }
 
 pub enum Msg {
-    SetRunnerScope(Scope<CodeRunner>),
-    SetMemory(Registers<i64>),
-    RunCode,
+    SetRunnerDispatch(Callback<DebugAction>),
     DebugStop,
     DebugStep,
     DebugStart,
-    SetReadOnly(bool),
-    SetTextModel(TextModel),
+    SetStore(Rc<Store>),
 }
 
 impl Component for App {
@@ -37,99 +31,72 @@ impl Component for App {
     type Properties = ();
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let run_code = ctx.link().callback(|_: ()| Msg::RunCode);
-        let set_read_only = ctx.link().callback(Msg::SetReadOnly);
+        let run_code = ctx.link().callback(|()| Msg::DebugStart);
 
-        let on_run = ctx.link().callback(|_| Msg::RunCode);
-        let on_stop = ctx.link().callback(|_| Msg::DebugStop);
-        let on_step = ctx.link().callback(|_| Msg::DebugStep);
-        let on_debug = ctx.link().callback(|_| Msg::DebugStart);
+        let on_run = ctx.link().callback(|()| Msg::DebugStart);
+        let on_stop = ctx.link().callback(|()| Msg::DebugStop);
+        let on_step = ctx.link().callback(|()| Msg::DebugStep);
+        let store = &self.store;
 
-        let set_text_model = ctx.link().callback(Msg::SetTextModel);
         let editor_placeholder = html! {<div id="container" class="editor-container placeholder"/>};
+        let line = store.current_debug_line;
+        let read_only = store.read_only;
+        let text_model = store.get_model().clone();
 
         html! {
           <main id="ram-web">
-              <Header {on_run} {on_step} {on_stop} {on_debug} />
+              <Header {on_run} {on_step} {on_stop} />
 
               <div class="interface">
                   <div class="editor-registers">
                       <HydrationGate placeholder={editor_placeholder}>
-                          <CustomEditor
-                              read_only={self.read_only}
-                              set_text_model={set_text_model}
-                              run_code={run_code}
-                          />
+                          <CustomEditor {text_model} {read_only} {run_code} {line} />
                       </HydrationGate>
-                      <Memory entries={self.memory.clone()} />
+                      <Memory />
                   </div>
               </div>
 
-              <CodeRunner
-                set_memory={ctx.link().callback(Msg::SetMemory)}
-                set_scope={ctx.link().callback(Msg::SetRunnerScope)}
-                breakpoints={self.breakpoints.clone()}
-                set_read_only={set_read_only}
-              />
+              <CodeRunner dispatch_setter={ctx.link().callback(Msg::SetRunnerDispatch)} />
 
           </main>
         }
     }
 
-    fn create(_ctx: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         log::info!("App Created");
+
+        let on_change = ctx.link().callback(Msg::SetStore);
+        let dispatch = Dispatch::global().subscribe(on_change);
+
         Self {
-            memory: Default::default(),
-            code_runner_scope: None,
-            text_model: None,
-            breakpoints: Default::default(),
-            read_only: false,
+            code_runner_dispatch: Default::default(),
+            store: dispatch.get(),
+            _dispatch: dispatch,
         }
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+        let text_model = &self.store.get_model();
         match msg {
-            Msg::SetRunnerScope(scope) => self.code_runner_scope = Some(scope),
-            Msg::SetMemory(memory) => {
-                self.memory = memory;
+            Msg::SetRunnerDispatch(dispatch) => self.code_runner_dispatch = dispatch,
+            Msg::SetStore(store) => {
+                self.store = store;
                 return true;
             }
-            Msg::SetTextModel(text_model) => {
-                self.text_model = Some(text_model);
-                return true;
-            }
-            Msg::SetReadOnly(read_only) => {
-                self.read_only = read_only;
-            }
-            Msg::RunCode => {
-                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
-                    runner.send_message(CodeRunnerMsg::RunCode(text_model.get_value()));
-                }
-            }
+
             Msg::DebugStart => {
-                if let Some((runner, text_model)) = self.zip_code_runner_and_text_model() {
-                    runner.send_message(CodeRunnerMsg::DebugStart(text_model.get_value()));
-                }
-            }
-            Msg::DebugStop => {
-                if let Some(s) = &self.code_runner_scope {
-                    s.send_message(CodeRunnerMsg::DebugStop);
-                }
+                self.code_runner_dispatch
+                    .emit(DebugAction::Start(text_model.get_value()));
             }
             Msg::DebugStep => {
-                if let Some(s) = &self.code_runner_scope {
-                    s.send_message(CodeRunnerMsg::DebugStep);
-                }
+                self.code_runner_dispatch
+                    .emit(DebugAction::Step(text_model.get_value()));
+            }
+            Msg::DebugStop => {
+                self.code_runner_dispatch.emit(DebugAction::Stop);
             }
         }
-        false
-    }
-}
 
-impl App {
-    fn zip_code_runner_and_text_model(&self) -> Option<(&Scope<CodeRunner>, &TextModel)> {
-        self.code_runner_scope
-            .as_ref()
-            .zip(self.text_model.as_ref())
+        false
     }
 }

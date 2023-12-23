@@ -1,18 +1,18 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
+use monaco::api::DisposableClosure;
+use monaco::sys::editor::IModelContentChangedEvent;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 
-use web_sys::window;
-
-const DEFAULT_CODE: &str = r#"
+pub const DEFAULT_CODE: &str = r"
 read 1
 write 1
 read 2
 write 2
 halt
-"#;
+";
 
 use monaco::{
     api::{CodeEditorOptions, TextModel},
@@ -24,17 +24,15 @@ use monaco::{
     yew::{CodeEditor, CodeEditorLink},
 };
 use yew::prelude::*;
+use yewdux::Dispatch;
 
 use crate::monaco_ram::register_ram;
 use crate::monaco_ram::{LANG_ID, THEME};
+use crate::store::Store;
 use crate::utils::comment_code;
 use crate::utils::download_code;
-use crate::utils::get_from_local_storage;
-use crate::utils::save_to_local_storage;
 
 type JsCallback = Closure<dyn Fn()>;
-
-static EDITOR_WAS_CREATED: AtomicBool = AtomicBool::new(false);
 
 pub fn get_editor_options(read_only: bool) -> IStandaloneEditorConstructionOptions {
     let options = CodeEditorOptions::default()
@@ -54,12 +52,13 @@ pub fn get_editor_options(read_only: bool) -> IStandaloneEditorConstructionOptio
 pub struct Props {
     pub run_code: Callback<()>,
     pub read_only: bool,
-    pub set_text_model: Callback<TextModel>,
+    pub line: usize,
+    pub text_model: TextModel,
 }
 
 pub enum Msg {
     EditorCreated(CodeEditorLink),
-    SaveCode,
+    ToggleBreakpoint(usize),
     DownloadCode,
     CommentCode,
 }
@@ -67,12 +66,11 @@ pub enum Msg {
 pub struct CustomEditor {
     editor: Option<CodeEditorLink>,
     editor_ref: NodeRef,
-    text_model: TextModel,
+    _text_model_saver: DisposableClosure<dyn FnMut(IModelContentChangedEvent)>,
 }
 
-//  WARN: Should not be rendered before hydration.
-//        Will panic due to calls to web apis.
-
+/// # Panics
+/// Panics if rendered before hydration.
 impl Component for CustomEditor {
     type Message = Msg;
     type Properties = Props;
@@ -81,13 +79,14 @@ impl Component for CustomEditor {
         let read_only = ctx.props().read_only;
 
         let on_editor_created = ctx.link().callback(Msg::EditorCreated);
+        let model = Some(ctx.props().text_model.clone());
 
         html! {
-          <div id="container" class="editor-container" ref={self.editor_ref.clone()}>
+          <div id="container" class="editor-container" ref={&self.editor_ref}>
               <CodeEditor
                 classes={"editor"}
                 options={get_editor_options(read_only)}
-                model={self.text_model.clone()}
+                {model}
                 {on_editor_created}
               />
           </div>
@@ -95,38 +94,22 @@ impl Component for CustomEditor {
     }
 
     fn create(ctx: &Context<Self>) -> Self {
-        log::info!("Editor Created");
+        log::info!("Editor Component Created");
         monaco::workers::ensure_environment_set();
         register_ram();
-
-        let code = get_from_local_storage("code").unwrap_or_else(|| DEFAULT_CODE.to_string());
-        let text_model = TextModel::create(code.as_str(), Some("ram"), None)
-            .expect("Failed to create text model");
-        let text_model_clone = text_model.clone();
-
-        ctx.props().set_text_model.emit(text_model.clone());
 
         let editor_ref: NodeRef = Default::default();
         let editor = None;
 
-        let on_before_unload = Closure::wrap(Box::new(move |_| {
-            save_to_local_storage("code", &text_model_clone.get_value());
-        }) as Box<dyn FnMut(web_sys::Event)>);
-
-        if let Some(window) = window() {
-            window
-                .add_event_listener_with_callback(
-                    "beforeunload",
-                    on_before_unload.as_ref().unchecked_ref(),
-                )
-                .expect("Failed to add beforeunload event listener");
-        }
-        on_before_unload.forget();
+        let text_model = &ctx.props().text_model;
+        let text_model_saver = text_model.on_did_change_content(move |_| {
+            Dispatch::global().reduce_mut(move |s: &mut Store| s.change_model());
+        });
 
         Self {
             editor,
             editor_ref,
-            text_model,
+            _text_model_saver: text_model_saver,
         }
     }
 
@@ -146,58 +129,36 @@ impl Component for CustomEditor {
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        let text_model = &self.text_model;
+        let text_model = &ctx.props().text_model;
         let run_code = &ctx.props().run_code;
 
         match msg {
             Msg::DownloadCode => {
-                download_code(&text_model.get_value()).expect("Failed to download code")
+                if let Err(err) = download_code(&text_model.get_value()) {
+                    gloo::console::error!("Failed to download code: ", err);
+                }
             }
             Msg::CommentCode => {
                 if let Some(editor) = &self.editor {
                     editor.with_editor(|editor| comment_code(editor, text_model));
                 }
             }
-            Msg::SaveCode => {
-                log::info!("Saving!");
-                save_to_local_storage("code", &text_model.get_value());
-            }
             Msg::EditorCreated(editor_link) => {
-                if EDITOR_WAS_CREATED.fetch_or(true, Ordering::SeqCst) {
+                static EDITOR_WAS_CREATED: AtomicBool = AtomicBool::new(false);
+
+                if EDITOR_WAS_CREATED.swap(true, Ordering::Relaxed) {
                     panic!("Editor was created twice!");
                 }
 
                 log::info!("Editor Created");
                 self.editor = Some(editor_link.clone());
-                let link1 = ctx.link().clone();
-                let link2 = ctx.link().clone();
-                let link3 = ctx.link().clone();
 
                 let run_code = run_code.clone();
                 let code_runner = JsCallback::new(move || run_code.emit(()));
-                let downloader = JsCallback::new(move || link1.send_message(Msg::DownloadCode));
-                let commenter = JsCallback::new(move || link2.send_message(Msg::CommentCode));
-                let code_saver = JsCallback::new(move || {
-                    let link = link3.clone();
-                    let code_saver_core = JsCallback::new(move || link.send_message(Msg::SaveCode));
-                    window()
-                        .unwrap()
-                        .set_timeout_with_callback_and_timeout_and_arguments_0(
-                            code_saver_core.as_ref().unchecked_ref(),
-                            50,
-                        )
-                        .unwrap();
-                    code_saver_core.forget();
-                });
-
-                self.editor_ref
-                    .get()
-                    .unwrap()
-                    .add_event_listener_with_callback(
-                        "keydown",
-                        code_saver.as_ref().unchecked_ref(),
-                    )
-                    .expect("Failed to add event listener");
+                let link = ctx.link().clone();
+                let downloader = JsCallback::new(move || link.send_message(Msg::DownloadCode));
+                let link = ctx.link().clone();
+                let commenter = JsCallback::new(move || link.send_message(Msg::CommentCode));
 
                 editor_link.with_editor(|editor| {
                     let run_code = KeyCode::Enter.to_value() | (KeyMod::ctrl_cmd() as u32);
@@ -206,7 +167,6 @@ impl Component for CustomEditor {
                     let code_runner = code_runner.as_ref().unchecked_ref();
                     let downloader = downloader.as_ref().unchecked_ref();
                     let commenter = commenter.as_ref().unchecked_ref();
-                    ctx.link().send_message(Msg::SaveCode);
 
                     let raw_editor: &IStandaloneCodeEditor = editor.as_ref();
                     raw_editor.add_command(run_code.into(), code_runner, None);
@@ -221,7 +181,15 @@ impl Component for CustomEditor {
                 code_runner.forget();
                 downloader.forget();
                 commenter.forget();
-                code_saver.forget();
+            }
+            Msg::ToggleBreakpoint(line) => {
+                Dispatch::global().reduce_mut(move |s: &mut Store| {
+                    if s.breakpoints.contains(&line) {
+                        s.breakpoints.remove(&line);
+                    } else {
+                        s.breakpoints.insert(line);
+                    }
+                });
             }
         }
         false
