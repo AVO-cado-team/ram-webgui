@@ -5,11 +5,13 @@ use ramemu::registers::Registers;
 use serde::{Deserialize, Serialize};
 use yewdux::prelude::*;
 
-use crate::code_editor::DEFAULT_CODE;
+use crate::{code_editor::DEFAULT_CODE, io::output::OutputComponentErrors};
 
 #[derive(Default, PartialEq, Store, Clone, Serialize, Deserialize)]
 #[store(storage = "local")]
 pub struct Store {
+    #[serde(skip)]
+    pub error: Option<OutputComponentErrors>,
     pub breakpoints: HashSet<usize>,
     pub read_only: bool,
     pub current_debug_line: usize,

@@ -1,8 +1,13 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
+use js_sys::Object;
 use monaco::api::DisposableClosure;
 use monaco::sys::editor::IModelContentChangedEvent;
+use monaco::sys::editor::IModelDecorationOptions;
+use monaco::sys::editor::IModelDeltaDecoration;
+use monaco::sys::IRange;
+use monaco::sys::Range;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 
@@ -143,6 +148,7 @@ impl Component for CustomEditor {
                 }
             }
             Msg::EditorCreated(editor_link) => {
+                // highlight_error(&editor_link, "some error", 1, 1);
                 static EDITOR_WAS_CREATED: AtomicBool = AtomicBool::new(false);
 
                 if EDITOR_WAS_CREATED.swap(true, Ordering::Relaxed) {
@@ -171,6 +177,26 @@ impl Component for CustomEditor {
                     raw_editor.add_command(run_code.into(), code_runner, None);
                     raw_editor.add_command(save_code.into(), downloader, None);
                     raw_editor.add_command(comment_code.into(), commenter, None);
+
+                    // crate::monaco_tweaks::setup(editor);
+
+                    let empty = js_sys::Array::new();
+                    let mut new_decorations = js_sys::Array::new();
+
+                    let options = Object::new().unchecked_into::<IModelDecorationOptions>();
+                    options.set_class_name(Some("error-line-highlight"));
+                    options.set_is_whole_line(Some(true));
+                    options.set_glyph_margin_class_name(Some("error-glyph"));
+
+                    let decoration = Object::new().unchecked_into::<IModelDeltaDecoration>();
+                    decoration.set_options(&options);
+                    let range: Range = Range::new(1., 1., 1., 1.);
+                    let irange: IRange = range.unchecked_into();
+                    decoration.set_range(&irange);
+
+                    new_decorations.push(&decoration);
+
+                    raw_editor.delta_decorations(&empty, &new_decorations);
                 });
 
                 // It iis okay to forget these callbacks because editor will not be created twice

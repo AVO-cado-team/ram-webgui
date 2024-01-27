@@ -58,7 +58,6 @@ pub struct Props {
 }
 
 pub struct CodeRunner {
-    error: Option<OutputComponentErrors>,
     stdout: String,
     writer: CustomWriter,
     debug: State,
@@ -71,10 +70,11 @@ impl Component for CodeRunner {
     type Properties = Props;
 
     fn view(&self, _ctx: &Context<Self>) -> Html {
+        let error = self.store.error.clone();
         html! {
             <div class="console-container">
               <OutputComponent
-                error={self.error.clone()}
+                {error}
                 output={self.stdout.clone()}
               />
               <InputComponent />
@@ -91,7 +91,6 @@ impl Component for CodeRunner {
         let dispatch = Dispatch::global().subscribe(on_change);
 
         Self {
-            error: None,
             debug: None,
             stdout: Default::default(),
             writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
@@ -173,7 +172,9 @@ impl CodeRunner {
                 Some((state, ram))
             }
             Err(e) => {
-                self.error = Some(OutputComponentErrors::ParseError(e));
+                Dispatch::global().reduce_mut(move |store: &mut Store| {
+                    store.error = Some(OutputComponentErrors::ParseError(e));
+                });
                 None
             }
         }
@@ -240,15 +241,16 @@ impl CodeRunner {
         let (_, ram) = debug?;
 
         let state: RamState = ram.into();
-        self.error = state.error.map(OutputComponentErrors::InterpretError);
 
         let registers = state.registers;
         let line = state.line;
+        let error = state.error;
 
         Dispatch::global().reduce_mut(|s: &mut Store| {
             s.set_registers(registers);
             s.read_only = false;
             s.current_debug_line = line;
+            s.error = error.map(OutputComponentErrors::InterpretError);
         });
 
         None
