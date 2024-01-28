@@ -8,8 +8,9 @@ mod header;
 mod io;
 mod memory;
 mod monaco_ram;
-mod utils;
+mod monaco_tweaks;
 mod store;
+mod utils;
 
 use std::panic::{self, PanicInfo};
 

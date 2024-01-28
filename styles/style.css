@@ -100,46 +100,39 @@ a:hover {
   font-family: Droid Sans Mono, monospace;
 }
 
-
-.compile-btn {
-  width: 15px;
-  height: 15px;
-  background: url("assets/start.png") center / 100% no-repeat;
+.control-btn div {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
 }
 
-.compile-btn:hover {
+
+.start-btn {
+  background: url("assets/start.svg") center / 100% no-repeat;
+}
+
+.start-btn:hover {
   cursor: pointer;
+
 }
 
-.pause-btn {
-  width: 21px;
-  height: 17px;
-  background: url("assets/pause.png") center / 100% no-repeat;
+.step-btn {
+  background: url("assets/step.svg") center / 100% no-repeat;
 }
 
-.pause-btn:hover {
+.step-btn:hover {
   cursor: pointer;
 }
 
 .stop-btn {
-  width: 24px;
-  height: 23px;
-  background: url("assets/stop.png") center / 100% no-repeat;
+  background: url("assets/stop.svg") center / 100% no-repeat;
 }
 
 .stop-btn:hover {
   cursor: pointer;
 }
 
-.debug-btn {
-  width: 18px;
-  height: 18px;
-  background: url("assets/debug.png") center / 100% no-repeat;
-}
-
-.debug-btn:hover {
-  cursor: pointer;
-}
 
 .diskette-btn {
   width: 18px;

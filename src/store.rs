@@ -1,22 +1,29 @@
 use std::collections::HashSet;
 
-use monaco::api::TextModel;
+use monaco::{api::TextModel, yew::CodeEditorLink};
 use ramemu::registers::Registers;
 use serde::{Deserialize, Serialize};
 use yewdux::prelude::*;
 
-use crate::code_editor::DEFAULT_CODE;
+use crate::{code_editor::DEFAULT_CODE, io::output::OutputComponentErrors};
 
 #[derive(Default, PartialEq, Store, Clone, Serialize, Deserialize)]
 #[store(storage = "local")]
 pub struct Store {
-    pub breakpoints: HashSet<usize>,
+    #[serde(skip)]
+    pub editor: CodeEditorLink,
+    #[serde(skip)]
+    pub error: Option<OutputComponentErrors>,
+    #[serde(skip)]
     pub read_only: bool,
+    #[serde(skip)]
     pub current_debug_line: usize,
-    pub stdin: String,
     #[serde(skip)]
     registers: Registers<i64>,
+
     text_model: TextModelWrapper,
+    pub breakpoints: HashSet<usize>,
+    pub stdin: String,
 }
 
 impl Store {

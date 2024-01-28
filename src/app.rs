@@ -1,5 +1,16 @@
 use std::rc::Rc;
 
+use js_sys::Object;
+use monaco::{
+    api::DisposableClosure,
+    sys::{
+        editor::{
+            IEditorMouseEvent, IModelDeltaDecoration, IStandaloneCodeEditor, MouseTargetType,
+        },
+        IRange, Range,
+    },
+};
+use wasm_bindgen::JsCast;
 use yew::prelude::*;
 use yewdux::prelude::*;
 
@@ -8,6 +19,7 @@ use crate::{
     code_runner::{CodeRunner, DebugAction},
     header::Header,
     memory::Memory,
+    monaco_tweaks::EditorStoreListener,
     store::Store,
     utils::HydrationGate,
 };
@@ -65,8 +77,13 @@ impl Component for App {
     fn create(ctx: &Context<Self>) -> Self {
         log::info!("App Created");
 
+        // listner_init
+
+        let dispatch = Dispatch::global();
+        init_listener(EditorStoreListener::default(), dispatch.context());
+
         let on_change = ctx.link().callback(Msg::SetStore);
-        let dispatch = Dispatch::global().subscribe(on_change);
+        let dispatch = dispatch.subscribe(on_change);
 
         Self {
             code_runner_dispatch: Default::default(),

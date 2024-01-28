@@ -1,7 +1,7 @@
 use ramemu::errors::{InterpretError, ParseError};
 use yew::prelude::*;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum OutputComponentErrors {
     InterpretError(InterpretError),
     ParseError(ParseError),
