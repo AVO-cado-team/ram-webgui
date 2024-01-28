@@ -243,13 +243,12 @@ impl CodeRunner {
         let state: RamState = ram.into();
 
         let registers = state.registers;
-        let line = state.line;
         let error = state.error;
 
         Dispatch::global().reduce_mut(|s: &mut Store| {
             s.set_registers(registers);
             s.read_only = false;
-            s.current_debug_line = line;
+            s.current_debug_line = 0;
             s.error = error.map(OutputComponentErrors::InterpretError);
         });
 

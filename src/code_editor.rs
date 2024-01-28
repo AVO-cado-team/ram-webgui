@@ -1,11 +1,16 @@
+use std::rc::Rc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
 use js_sys::Object;
 use monaco::api::DisposableClosure;
+use monaco::sys::editor;
+use monaco::sys::editor::IEditorHoverOptions;
+use monaco::sys::editor::IEditorMouseEvent;
 use monaco::sys::editor::IModelContentChangedEvent;
 use monaco::sys::editor::IModelDecorationOptions;
 use monaco::sys::editor::IModelDeltaDecoration;
+use monaco::sys::editor::MouseTargetType;
 use monaco::sys::IRange;
 use monaco::sys::Range;
 use wasm_bindgen::closure::Closure;
@@ -33,6 +38,7 @@ use yewdux::Dispatch;
 
 use crate::monaco_ram::register_ram;
 use crate::monaco_ram::{LANG_ID, THEME};
+use crate::monaco_tweaks::setup_breakpoints;
 use crate::store::Store;
 use crate::utils::comment_code;
 use crate::utils::download_code;
@@ -46,10 +52,16 @@ pub fn get_editor_options(read_only: bool) -> IStandaloneEditorConstructionOptio
         .with_automatic_layout(true)
         .to_sys_options();
 
+    let hover_options = Object::new().unchecked_into::<IEditorHoverOptions>(); // Doesn't work
+    hover_options.set_enabled(Some(true));
+    hover_options.set_delay(Some(300.));
+
     options.set_font_size(Some(16.0));
     options.set_tab_completion(Some(IEditorOptionsTabCompletion::On));
     options.set_read_only(Some(read_only));
-
+    options.set_glyph_margin(Some(true));
+    options.set_line_numbers(Some(editor::LineNumbersType::Relative));
+    options.set_hover(Some(&hover_options)); // Doesn't work
     options
 }
 
@@ -68,7 +80,6 @@ pub enum Msg {
 }
 
 pub struct CustomEditor {
-    editor: Option<CodeEditorLink>,
     editor_ref: NodeRef,
     _text_model_saver: DisposableClosure<dyn FnMut(IModelContentChangedEvent)>,
 }
@@ -103,7 +114,6 @@ impl Component for CustomEditor {
         register_ram();
 
         let editor_ref: NodeRef = Default::default();
-        let editor = None;
 
         let text_model = &ctx.props().text_model;
         let text_model_saver = text_model.on_did_change_content(move |_| {
@@ -111,7 +121,6 @@ impl Component for CustomEditor {
         });
 
         Self {
-            editor,
             editor_ref,
             _text_model_saver: text_model_saver,
         }
@@ -119,16 +128,13 @@ impl Component for CustomEditor {
 
     fn changed(&mut self, ctx: &Context<Self>, old_props: &Self::Properties) -> bool {
         let read_only = ctx.props().read_only;
-
+        let editor = Dispatch::global().reduce_mut(|s: &mut Store| s.editor.clone());
         if read_only != old_props.read_only {
-            if let Some(editor) = &self.editor {
-                editor.with_editor(|editor| {
-                    let ieditor: &ICodeEditor = editor.as_ref();
-                    ieditor.update_options(&get_editor_options(read_only));
-                });
-            }
-        }
-
+            editor.with_editor(|editor| {
+                let ieditor: &ICodeEditor = editor.as_ref();
+                ieditor.update_options(&get_editor_options(read_only));
+            });
+        };
         false
     }
 
@@ -143,9 +149,8 @@ impl Component for CustomEditor {
                 }
             }
             Msg::CommentCode => {
-                if let Some(editor) = &self.editor {
-                    editor.with_editor(|editor| comment_code(editor, text_model));
-                }
+                let editor = Dispatch::global().reduce_mut(|s: &mut Store| s.editor.clone());
+                editor.with_editor(|editor| comment_code(editor, text_model));
             }
             Msg::EditorCreated(editor_link) => {
                 // highlight_error(&editor_link, "some error", 1, 1);
@@ -156,7 +161,7 @@ impl Component for CustomEditor {
                 }
 
                 log::info!("Editor Created");
-                self.editor = Some(editor_link.clone());
+                Dispatch::global().reduce_mut(|s: &mut Store| s.editor = editor_link.clone());
 
                 let run_code = run_code.clone();
                 let code_runner = JsCallback::new(move || run_code.emit(()));
@@ -178,25 +183,7 @@ impl Component for CustomEditor {
                     raw_editor.add_command(save_code.into(), downloader, None);
                     raw_editor.add_command(comment_code.into(), commenter, None);
 
-                    // crate::monaco_tweaks::setup(editor);
-
-                    let empty = js_sys::Array::new();
-                    let mut new_decorations = js_sys::Array::new();
-
-                    let options = Object::new().unchecked_into::<IModelDecorationOptions>();
-                    options.set_class_name(Some("error-line-highlight"));
-                    options.set_is_whole_line(Some(true));
-                    options.set_glyph_margin_class_name(Some("error-glyph"));
-
-                    let decoration = Object::new().unchecked_into::<IModelDeltaDecoration>();
-                    decoration.set_options(&options);
-                    let range: Range = Range::new(1., 1., 1., 1.);
-                    let irange: IRange = range.unchecked_into();
-                    decoration.set_range(&irange);
-
-                    new_decorations.push(&decoration);
-
-                    raw_editor.delta_decorations(&empty, &new_decorations);
+                    std::mem::forget(setup_breakpoints(editor));
                 });
 
                 // It iis okay to forget these callbacks because editor will not be created twice

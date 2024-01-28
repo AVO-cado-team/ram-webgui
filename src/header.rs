@@ -64,8 +64,8 @@ pub fn header(props: &Props) -> Html {
             </a>
           </div>
           <div class="controls">
-            <button onclick={move |_| on_start.emit(())} class="control-btn"><div class="compile-btn"/></button>
-            <button onclick={move |_| on_step.emit(())} class="control-btn"><div class="pause-btn"/></button>
+            <button onclick={move |_| on_start.emit(())} class="control-btn"><div class="start-btn"/></button>
+            <button onclick={move |_| on_step.emit(())} class="control-btn"><div class="step-btn"/></button>
             <button onclick={move |_| on_stop.emit(())} class="control-btn"><div class="stop-btn"/></button>
           </div>
           <div class="help">
