@@ -224,14 +224,17 @@ impl CodeRunner {
                 }
             }),
         };
-        let state: RamState = ram.as_ref().into();
-        let registers = state.registers;
-        let line = state.line;
 
-        dispatch().reduce_mut(|s: &mut Store| {
-            s.set_registers(registers);
-            s.current_debug_line = line;
-        });
+        if kind == Pause {
+            let state: RamState = ram.as_ref().into();
+            let registers = state.registers;
+            let line = state.line;
+
+            dispatch().reduce_mut(|s: &mut Store| {
+                s.set_registers(registers);
+                s.current_debug_line = line;
+            });
+        }
 
         Some((kind, ram))
     }
