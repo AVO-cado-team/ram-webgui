@@ -5,6 +5,7 @@ use crate::io::custom_writer::CustomWriter;
 use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 use crate::io::output::OutputComponentErrors;
+use crate::store::dispatch;
 use crate::store::Store;
 
 use ramemu::program::Program;
@@ -85,10 +86,10 @@ impl Component for CodeRunner {
     fn create(ctx: &Context<Self>) -> Self {
         ctx.props()
             .dispatch_setter
-            .emit(ctx.link().callback(|d| Msg::DebugAction(d)));
+            .emit(ctx.link().callback(Msg::DebugAction));
 
         let on_change = ctx.link().callback(Msg::SetStore);
-        let dispatch = Dispatch::global().subscribe(on_change);
+        let dispatch = dispatch().subscribe(on_change);
 
         Self {
             debug: None,
@@ -103,7 +104,7 @@ impl Component for CodeRunner {
         if ctx.props().dispatch_setter != old_props.dispatch_setter {
             ctx.props()
                 .dispatch_setter
-                .emit(ctx.link().callback(|d| Msg::DebugAction(d)));
+                .emit(ctx.link().callback(Msg::DebugAction));
         }
 
         false
@@ -166,13 +167,13 @@ impl CodeRunner {
                     Box::new(self.writer.clone()),
                 );
 
-                Dispatch::global().reduce_mut(|s: &mut Store| s.read_only = true);
+                dispatch().reduce_mut(|s: &mut Store| s.read_only = true);
 
                 ctx.link().send_message(Msg::DebugAction(message));
                 Some((state, ram))
             }
             Err(e) => {
-                Dispatch::global().reduce_mut(move |store: &mut Store| {
+                dispatch().reduce_mut(move |store: &mut Store| {
                     store.error = Some(OutputComponentErrors::ParseError(e));
                 });
                 None
@@ -182,13 +183,13 @@ impl CodeRunner {
 
     #[allow(clippy::unnecessary_wraps, clippy::unused_self)]
     fn debug_step(&self, ctx: &Context<Self>, mut ram: Ram) -> State {
-        log::info!("Debug Step");
+        log::debug!("Debug Step");
 
         match ram.next() {
             Some(state) => {
                 let registers = state.registers;
                 let line = state.line;
-                Dispatch::global().reduce_mut(|s: &mut Store| {
+                dispatch().reduce_mut(|s: &mut Store| {
                     s.set_registers(registers);
                     s.current_debug_line = line;
                 });
@@ -201,7 +202,7 @@ impl CodeRunner {
 
     #[allow(clippy::unnecessary_wraps, clippy::unused_self)]
     fn debug_continue(&self, ctx: &Context<Self>, mut ram: Ram) -> State {
-        log::info!("Debug Continue");
+        log::debug!("Debug Continue");
 
         let breakpoints = &self.store.breakpoints;
         let kind;
@@ -227,7 +228,7 @@ impl CodeRunner {
         let registers = state.registers;
         let line = state.line;
 
-        Dispatch::global().reduce_mut(|s: &mut Store| {
+        dispatch().reduce_mut(|s: &mut Store| {
             s.set_registers(registers);
             s.current_debug_line = line;
         });
@@ -245,7 +246,7 @@ impl CodeRunner {
         let registers = state.registers;
         let error = state.error;
 
-        Dispatch::global().reduce_mut(|s: &mut Store| {
+        dispatch().reduce_mut(|s: &mut Store| {
             s.set_registers(registers);
             s.read_only = false;
             s.current_debug_line = 0;

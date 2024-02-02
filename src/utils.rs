@@ -56,7 +56,11 @@ pub fn comment_code(editor: &CodeEditor, model: &TextModel) -> Result<(), ()> {
     let text = itext_model.get_value_in_range(&range.clone().unchecked_into(), None);
 
     let (new_text, do_comment) = {
-        match text.lines().map(|l| l.strip_prefix('#')).collect::<Option<Vec<_>>>() {
+        match text
+            .lines()
+            .map(|l| l.strip_prefix('#'))
+            .collect::<Option<Vec<_>>>()
+        {
             Some(lines) => (lines.join("\n"), false),
             None => {
                 let lines: Vec<_> = text.lines().map(|l| format!("#{l}")).collect();
@@ -66,7 +70,7 @@ pub fn comment_code(editor: &CodeEditor, model: &TextModel) -> Result<(), ()> {
     };
 
     let edits = Array::new();
-    let edit = Object::new().unchecked_into::<IIdentifiedSingleEditOperation>();
+    let edit: IIdentifiedSingleEditOperation = Object::new().unchecked_into();
     edit.set_range(&range);
     edit.set_text(Some(&new_text));
     edits.push(&edit);

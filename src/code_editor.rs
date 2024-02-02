@@ -1,20 +1,26 @@
-use std::rc::Rc;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use js_sys::Object;
-use monaco::api::DisposableClosure;
-use monaco::sys::editor;
-use monaco::sys::editor::IEditorHoverOptions;
-use monaco::sys::editor::IEditorMouseEvent;
-use monaco::sys::editor::IModelContentChangedEvent;
-use monaco::sys::editor::IModelDecorationOptions;
-use monaco::sys::editor::IModelDeltaDecoration;
-use monaco::sys::editor::MouseTargetType;
-use monaco::sys::IRange;
-use monaco::sys::Range;
-use wasm_bindgen::closure::Closure;
-use wasm_bindgen::JsCast;
+use monaco::{
+    api::CodeEditorOptions,
+    sys::editor::{
+        self, ICodeEditor, IEditorHoverOptions, IEditorOptionsTabCompletion, IStandaloneCodeEditor,
+        IStandaloneEditorConstructionOptions,
+    },
+    sys::{KeyCode, KeyMod},
+    yew::{CodeEditor, CodeEditorLink},
+};
+use wasm_bindgen::{closure::Closure, JsCast};
+use yew::prelude::*;
+
+use crate::{
+    monaco_ram::{register_ram, LANG_ID, THEME},
+    monaco_tweaks::setup_breakpoints,
+    store::{dispatch, Store},
+    utils::{comment_code, download_code},
+};
+
+type JsCallback = Closure<dyn Fn()>;
 
 pub const DEFAULT_CODE: &str = r"
 read 1
@@ -23,27 +29,6 @@ read 2
 write 2
 halt
 ";
-
-use monaco::{
-    api::{CodeEditorOptions, TextModel},
-    sys::editor::ICodeEditor,
-    sys::editor::IStandaloneCodeEditor,
-    sys::editor::{IEditorOptionsTabCompletion, IStandaloneEditorConstructionOptions},
-    sys::KeyCode,
-    sys::KeyMod,
-    yew::{CodeEditor, CodeEditorLink},
-};
-use yew::prelude::*;
-use yewdux::Dispatch;
-
-use crate::monaco_ram::register_ram;
-use crate::monaco_ram::{LANG_ID, THEME};
-use crate::monaco_tweaks::setup_breakpoints;
-use crate::store::Store;
-use crate::utils::comment_code;
-use crate::utils::download_code;
-
-type JsCallback = Closure<dyn Fn()>;
 
 pub fn get_editor_options(read_only: bool) -> IStandaloneEditorConstructionOptions {
     let options = CodeEditorOptions::default()
@@ -70,7 +55,6 @@ pub struct Props {
     pub run_code: Callback<()>,
     pub read_only: bool,
     pub line: usize,
-    pub text_model: TextModel,
 }
 
 pub enum Msg {
@@ -81,7 +65,6 @@ pub enum Msg {
 
 pub struct CustomEditor {
     editor_ref: NodeRef,
-    _text_model_saver: DisposableClosure<dyn FnMut(IModelContentChangedEvent)>,
 }
 
 /// # Panics
@@ -94,7 +77,7 @@ impl Component for CustomEditor {
         let read_only = ctx.props().read_only;
 
         let on_editor_created = ctx.link().callback(Msg::EditorCreated);
-        let model = Some(ctx.props().text_model.clone());
+        let model = Some(dispatch().get().get_model().clone());
 
         html! {
           <div id="container" class="editor-container" ref={&self.editor_ref}>
@@ -108,27 +91,25 @@ impl Component for CustomEditor {
         }
     }
 
-    fn create(ctx: &Context<Self>) -> Self {
-        log::info!("Editor Component Created");
+    fn create(_ctx: &Context<Self>) -> Self {
+        log::debug!("Editor Component Created");
         monaco::workers::ensure_environment_set();
         register_ram();
 
         let editor_ref: NodeRef = Default::default();
 
-        let text_model = &ctx.props().text_model;
+        let text_model = dispatch().get().get_model().clone();
         let text_model_saver = text_model.on_did_change_content(move |_| {
-            Dispatch::global().reduce_mut(move |s: &mut Store| s.change_model());
+            dispatch().reduce_mut(move |s: &mut Store| s.change_model());
         });
+        std::mem::forget(text_model_saver);
 
-        Self {
-            editor_ref,
-            _text_model_saver: text_model_saver,
-        }
+        Self { editor_ref }
     }
 
     fn changed(&mut self, ctx: &Context<Self>, old_props: &Self::Properties) -> bool {
         let read_only = ctx.props().read_only;
-        let editor = Dispatch::global().reduce_mut(|s: &mut Store| s.editor.clone());
+        let editor = dispatch().get().editor.clone();
         if read_only != old_props.read_only {
             editor.with_editor(|editor| {
                 let ieditor: &ICodeEditor = editor.as_ref();
@@ -139,7 +120,7 @@ impl Component for CustomEditor {
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        let text_model = &ctx.props().text_model;
+        let text_model = dispatch().get().get_model().clone();
         let run_code = &ctx.props().run_code;
 
         match msg {
@@ -149,8 +130,8 @@ impl Component for CustomEditor {
                 }
             }
             Msg::CommentCode => {
-                let editor = Dispatch::global().reduce_mut(|s: &mut Store| s.editor.clone());
-                editor.with_editor(|editor| comment_code(editor, text_model));
+                let editor = dispatch().get().editor.clone();
+                editor.with_editor(|editor| comment_code(editor, &text_model));
             }
             Msg::EditorCreated(editor_link) => {
                 // highlight_error(&editor_link, "some error", 1, 1);
@@ -161,7 +142,7 @@ impl Component for CustomEditor {
                 }
 
                 log::info!("Editor Created");
-                Dispatch::global().reduce_mut(|s: &mut Store| s.editor = editor_link.clone());
+                dispatch().reduce_mut(|s: &mut Store| s.editor = editor_link.clone());
 
                 let run_code = run_code.clone();
                 let code_runner = JsCallback::new(move || run_code.emit(()));

@@ -1,26 +1,16 @@
 use std::rc::Rc;
 
-use js_sys::Object;
-use monaco::{
-    api::DisposableClosure,
-    sys::{
-        editor::{
-            IEditorMouseEvent, IModelDeltaDecoration, IStandaloneCodeEditor, MouseTargetType,
-        },
-        IRange, Range,
-    },
-};
-use wasm_bindgen::JsCast;
 use yew::prelude::*;
 use yewdux::prelude::*;
 
+#[cfg(not(feature = "ssr"))]
+use crate::monaco_tweaks::EditorStoreListener;
 use crate::{
     code_editor::CustomEditor,
     code_runner::{CodeRunner, DebugAction},
     header::Header,
     memory::Memory,
-    monaco_tweaks::EditorStoreListener,
-    store::Store,
+    store::{dispatch, Store},
     utils::HydrationGate,
 };
 
@@ -53,24 +43,25 @@ impl Component for App {
         let editor_placeholder = html! {<div id="container" class="editor-container placeholder"/>};
         let line = store.current_debug_line;
         let read_only = store.read_only;
-        let text_model = store.get_model().clone();
 
         html! {
-          <main id="ram-web">
-              <Header {on_run} {on_step} {on_stop} />
+        <YewduxRoot>
+            <main id="ram-web">
+                <Header {on_run} {on_step} {on_stop} />
 
-              <div class="interface">
-                  <div class="editor-registers">
-                      <HydrationGate placeholder={editor_placeholder}>
-                          <CustomEditor {text_model} {read_only} {run_code} {line} />
-                      </HydrationGate>
-                      <Memory />
-                  </div>
-              </div>
+                <div class="interface">
+                    <div class="editor-registers">
+                        <HydrationGate placeholder={editor_placeholder}>
+                            <CustomEditor {read_only} {run_code} {line} />
+                        </HydrationGate>
+                        <Memory />
+                    </div>
+                </div>
 
-              <CodeRunner dispatch_setter={ctx.link().callback(Msg::SetRunnerDispatch)} />
+                <CodeRunner dispatch_setter={ctx.link().callback(Msg::SetRunnerDispatch)} />
 
-          </main>
+            </main>
+        </YewduxRoot>
         }
     }
 
@@ -79,7 +70,8 @@ impl Component for App {
 
         // listner_init
 
-        let dispatch = Dispatch::global();
+        let dispatch = dispatch();
+        #[cfg(not(feature = "ssr"))]
         init_listener(EditorStoreListener::default(), dispatch.context());
 
         let on_change = ctx.link().callback(Msg::SetStore);
@@ -93,7 +85,6 @@ impl Component for App {
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-        let text_model = &self.store.get_model();
         match msg {
             Msg::SetRunnerDispatch(dispatch) => self.code_runner_dispatch = dispatch,
             Msg::SetStore(store) => {
@@ -101,11 +92,19 @@ impl Component for App {
                 return true;
             }
 
+            #[cfg(feature = "ssr")]
+            Msg::DebugStep | Msg::DebugStart => {
+                panic!("Debugging is not supported in server side rendering")
+            }
+            #[cfg(not(feature = "ssr"))]
             Msg::DebugStart => {
+                let text_model = &self.store.get_model();
                 self.code_runner_dispatch
                     .emit(DebugAction::Start(text_model.get_value()));
             }
+            #[cfg(not(feature = "ssr"))]
             Msg::DebugStep => {
+                let text_model = &self.store.get_model();
                 self.code_runner_dispatch
                     .emit(DebugAction::Step(text_model.get_value()));
             }

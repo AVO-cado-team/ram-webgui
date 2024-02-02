@@ -1,16 +1,27 @@
 use std::collections::HashSet;
 
-use monaco::{api::TextModel, yew::CodeEditorLink};
+use monaco::api::TextModel;
+#[cfg(not(feature = "ssr"))]
+use monaco::yew::CodeEditorLink;
 use ramemu::registers::Registers;
 use serde::{Deserialize, Serialize};
-use yewdux::prelude::*;
+use yewdux::{prelude::*, Context};
 
 use crate::{code_editor::DEFAULT_CODE, io::output::OutputComponentErrors};
+
+thread_local! {
+    static CONTEXT: Context = Default::default();
+}
+
+pub fn dispatch() -> Dispatch<Store> {
+    Dispatch::new(&CONTEXT.with(|context| context.clone()))
+}
 
 #[derive(Default, PartialEq, Store, Clone, Serialize, Deserialize)]
 #[store(storage = "local")]
 pub struct Store {
     #[serde(skip)]
+    #[cfg(not(feature = "ssr"))]
     pub editor: CodeEditorLink,
     #[serde(skip)]
     pub error: Option<OutputComponentErrors>,
@@ -21,15 +32,18 @@ pub struct Store {
     #[serde(skip)]
     registers: Registers<i64>,
 
+    #[cfg(not(feature = "ssr"))]
     text_model: TextModelWrapper,
     pub breakpoints: HashSet<usize>,
     pub stdin: String,
 }
 
 impl Store {
+    #[cfg(not(feature = "ssr"))]
     pub fn get_model(&self) -> &TextModel {
         &self.text_model.0
     }
+    #[cfg(not(feature = "ssr"))]
     pub fn change_model(&mut self) {
         self.text_model.1 = self.text_model.1.wrapping_add(1);
     }

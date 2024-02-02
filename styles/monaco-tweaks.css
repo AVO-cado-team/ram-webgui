@@ -37,3 +37,7 @@ div:has(.line-numbers:hover) {
     padding-left: 5px;
     padding-top: 2px; */
 }
+
+.monaco-editor .relative-current-line-number {
+  width: 50% !important; /* override */
+}

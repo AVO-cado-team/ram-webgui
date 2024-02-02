@@ -29,6 +29,9 @@ jobs:
       with:
         version: 'latest'
 
+    - name: SSR
+      run: ./generate_static.sh
+
     - name: Build project
       run: trunk build --release --public-url ram-webgui
 

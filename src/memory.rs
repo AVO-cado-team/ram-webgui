@@ -7,7 +7,6 @@ use crate::store::Store;
 const WINDOW_LENGTH: usize = 100;
 const STEP_SIZE: usize = 50;
 
-
 #[function_component]
 pub fn Memory() -> Html {
     let registers = use_selector(|s: &Store| s.get_registers().clone());
