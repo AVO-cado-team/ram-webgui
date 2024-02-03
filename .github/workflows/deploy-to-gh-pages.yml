@@ -35,6 +35,9 @@ jobs:
     - name: Build project
       run: trunk build --release --public-url ram-webgui
 
+    - name: Update PWA Cache
+      run: ./generate_cache_files.sh
+
     - name: Deploy to gh-pages
       uses: JamesIves/github-pages-deploy-action@v4
       with:
