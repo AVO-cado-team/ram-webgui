@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use ramemu::errors::{InterpretError, ParseError};
 use yew::prelude::*;
 
@@ -9,23 +11,25 @@ pub enum OutputComponentErrors {
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-    pub error: Option<OutputComponentErrors>,
+    pub errors: Vec<OutputComponentErrors>,
     pub output: AttrValue,
 }
 
 #[function_component(OutputComponent)]
 pub fn output_component(props: &Props) -> Html {
-    let output = match &props.error {
-        Some(OutputComponentErrors::InterpretError(err)) => format!("{err:?}"),
-        Some(OutputComponentErrors::ParseError(err)) => format!("{err:?}"),
-        None => props.output.to_string(),
-    };
+    let errors = props.errors.iter().map(|err| match err {
+        // TODO:
+        OutputComponentErrors::InterpretError(err) => {
+            html! { <div class="console-runtime-error-fg console-bold">{format!("{err:?}")}</div> }
+        }
+        OutputComponentErrors::ParseError(err) => {
+            html! { <div class="console-parse-error-fg console-bold">{format!("{err:?}")}</div> }
+        }
+    });
     html! {
       <div class="console-output">
-        if props.error.is_some() {
-          <span class="console-error-fg console-bold">{"Error: "}</span>
-        }
-        <span style="white-space:pre"> { output } </span>
+        { for errors }
+        <span style="white-space:pre"> { &props.output } </span>
       </div>
     }
 }

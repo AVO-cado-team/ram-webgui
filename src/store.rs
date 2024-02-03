@@ -24,7 +24,7 @@ pub struct Store {
     #[cfg(not(feature = "ssr"))]
     pub editor: CodeEditorLink,
     #[serde(skip)]
-    pub error: Option<OutputComponentErrors>,
+    pub errors: Vec<OutputComponentErrors>,
     #[serde(skip)]
     pub read_only: bool,
     #[serde(skip)]

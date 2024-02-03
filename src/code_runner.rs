@@ -8,10 +8,12 @@ use crate::io::output::OutputComponentErrors;
 use crate::store::dispatch;
 use crate::store::Store;
 
+use ramemu::parser::parse;
 use ramemu::program::Program;
 use ramemu::ram::Ram;
 use ramemu::ram::RamState;
 
+use yew::macros;
 use yew::prelude::*;
 use yewdux::Dispatch;
 
@@ -71,11 +73,11 @@ impl Component for CodeRunner {
     type Properties = Props;
 
     fn view(&self, _ctx: &Context<Self>) -> Html {
-        let error = self.store.error.clone();
+        let errors = self.store.errors.clone();
         html! {
             <div class="console-container">
               <OutputComponent
-                {error}
+                {errors}
                 output={self.stdout.clone()}
               />
               <InputComponent />
@@ -159,7 +161,7 @@ impl CodeRunner {
             state => panic!("Called `debug_start` in {state:?}"),
         };
 
-        match Program::from_source(&code) {
+        match parse(&code) {
             Ok(program) => {
                 let ram = Ram::new(
                     program,
@@ -174,7 +176,10 @@ impl CodeRunner {
             }
             Err(e) => {
                 dispatch().reduce_mut(move |store: &mut Store| {
-                    store.error = Some(OutputComponentErrors::ParseError(e));
+                    store.errors = e
+                        .into_iter()
+                        .map(OutputComponentErrors::ParseError)
+                        .collect();
                 });
                 None
             }
@@ -253,7 +258,10 @@ impl CodeRunner {
             s.set_registers(registers);
             s.read_only = false;
             s.current_debug_line = 0;
-            s.error = error.map(OutputComponentErrors::InterpretError);
+            s.errors = error
+                .map(OutputComponentErrors::InterpretError)
+                .into_iter()
+                .collect();
         });
 
         None

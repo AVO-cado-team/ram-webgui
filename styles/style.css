@@ -51,7 +51,7 @@ a {
 
 .controls:hover,
 a:hover {
-  border-bottom: 2px solid #5ab1bd;
+  border-bottom: 2px solid #5E81AC;
 }
 
 .logo {
@@ -81,6 +81,10 @@ a:hover {
   border: 2px solid transparent;
 }
 
+.controls:active {
+  border: none;
+}
+
 .help {
   transform: translateX(-1.5em);
 }
@@ -107,30 +111,24 @@ a:hover {
   max-height: 100%;
 }
 
+.control-btn:hover {
+  animation-duration: 1s;
+  cursor: pointer;
+  background-color: #434C5E;
+  border-radius: 10px;
+  padding: 7px;
+}
 
 .start-btn {
   background: url("assets/start.svg") center / 100% no-repeat;
-}
-
-.start-btn:hover {
-  cursor: pointer;
-
 }
 
 .step-btn {
   background: url("assets/step.svg") center / 100% no-repeat;
 }
 
-.step-btn:hover {
-  cursor: pointer;
-}
-
 .stop-btn {
   background: url("assets/stop.svg") center / 100% no-repeat;
-}
-
-.stop-btn:hover {
-  cursor: pointer;
 }
 
 

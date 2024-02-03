@@ -32,7 +32,14 @@ impl Listener for EditorStoreListener {
 
     fn on_change(&mut self, _: &yewdux::Context, state: Rc<Self::Store>) {
         state.editor.with_editor(|editor| {
-            let error_ids = state.error.as_ref().map_or(Array::new(), draw_error);
+            // let error_ids = state.error.as_ref().map_or(Array::new(), draw_error);
+            let error_ids = Array::new();
+            for error in &state.errors {
+                let error_decoration_id = draw_error(error);
+                for id in error_decoration_id.iter() {
+                    error_ids.push(&id);
+                }
+            }
 
             let breakpoint_ids = Array::new();
             for &line in &state.breakpoints {
