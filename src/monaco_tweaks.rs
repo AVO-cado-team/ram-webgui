@@ -3,9 +3,12 @@ use std::rc::Rc;
 use js_sys::{Array, Object};
 use monaco::{
     api::{CodeEditor, DisposableClosure},
-    sys::editor::{
-        IEditorMouseEvent, IModelDecorationOptions, IModelDeltaDecoration, IStandaloneCodeEditor,
-        MouseTargetType,
+    sys::{
+        editor::{
+            ICodeEditor, IEditorMouseEvent, IModelDecorationOptions, IModelDeltaDecoration,
+            IStandaloneCodeEditor, MouseTargetType,
+        },
+        Selection,
     },
     sys::{IRange, Range},
 };
@@ -56,11 +59,17 @@ impl Listener for EditorStoreListener {
 
 pub fn setup_breakpoints(editor: &CodeEditor) -> DisposableClosure<dyn FnMut(IEditorMouseEvent)> {
     editor.on_mouse_down(|e| {
+        let editor = dispatch().get().editor.clone();
         if let MouseTargetType::GutterLineNumbers = e.target().type_() {
             let Some(line_number) = e.target().position() else {
                 return;
             };
             let line_number = line_number.line_number() as usize;
+            editor.with_editor(|editor| {
+                let s = Selection::new(line_number as f64, 0., line_number as f64, 0.);
+                let editor: &ICodeEditor = editor.as_ref();
+                editor.set_selection(&s.unchecked_into());
+            });
 
             dispatch().reduce_mut(|s: &mut Store| {
                 if s.breakpoints.contains(&line_number) {

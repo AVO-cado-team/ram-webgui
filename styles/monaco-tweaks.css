@@ -1,10 +1,8 @@
-/* .line-numbers:hover { */
-div:has(.line-numbers:hover) {
+.line-numbers:hover {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='4' fill='rgba(255, 0, 0, 60%)'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: 8px center;
     background-size: 10px 10px;
-    /* margin-left: 10px; */
 }
 
 .breakpoint {
@@ -12,7 +10,8 @@ div:has(.line-numbers:hover) {
     background-repeat: no-repeat;
     background-position: 8px center;
     background-size: 10px 10px;
-    /* padding-left: 32px; */
+    padding-left: 32px;
+    left: 22px !important;
 }
 
 .syntax-error-line-highlight {
@@ -39,5 +38,6 @@ div:has(.line-numbers:hover) {
 }
 
 .monaco-editor .relative-current-line-number {
-  width: 50% !important; /* override */
+    width: 50% !important;
+    /* override */
 }
