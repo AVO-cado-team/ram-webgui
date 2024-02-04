@@ -5,12 +5,15 @@ use crate::io::custom_writer::CustomWriter;
 use crate::io::input::InputComponent;
 use crate::io::output::OutputComponent;
 use crate::io::output::OutputComponentErrors;
+use crate::store::dispatch;
 use crate::store::Store;
 
+use ramemu::parser::parse;
 use ramemu::program::Program;
 use ramemu::ram::Ram;
 use ramemu::ram::RamState;
 
+use yew::macros;
 use yew::prelude::*;
 use yewdux::Dispatch;
 
@@ -58,7 +61,6 @@ pub struct Props {
 }
 
 pub struct CodeRunner {
-    error: Option<OutputComponentErrors>,
     stdout: String,
     writer: CustomWriter,
     debug: State,
@@ -71,10 +73,11 @@ impl Component for CodeRunner {
     type Properties = Props;
 
     fn view(&self, _ctx: &Context<Self>) -> Html {
+        let errors = self.store.errors.clone();
         html! {
             <div class="console-container">
               <OutputComponent
-                error={self.error.clone()}
+                {errors}
                 output={self.stdout.clone()}
               />
               <InputComponent />
@@ -85,13 +88,12 @@ impl Component for CodeRunner {
     fn create(ctx: &Context<Self>) -> Self {
         ctx.props()
             .dispatch_setter
-            .emit(ctx.link().callback(|d| Msg::DebugAction(d)));
+            .emit(ctx.link().callback(Msg::DebugAction));
 
         let on_change = ctx.link().callback(Msg::SetStore);
-        let dispatch = Dispatch::global().subscribe(on_change);
+        let dispatch = dispatch().subscribe(on_change);
 
         Self {
-            error: None,
             debug: None,
             stdout: Default::default(),
             writer: CustomWriter::new(ctx.link().callback(Msg::WriterWrote)),
@@ -104,7 +106,7 @@ impl Component for CodeRunner {
         if ctx.props().dispatch_setter != old_props.dispatch_setter {
             ctx.props()
                 .dispatch_setter
-                .emit(ctx.link().callback(|d| Msg::DebugAction(d)));
+                .emit(ctx.link().callback(Msg::DebugAction));
         }
 
         false
@@ -159,7 +161,7 @@ impl CodeRunner {
             state => panic!("Called `debug_start` in {state:?}"),
         };
 
-        match Program::from_source(&code) {
+        match parse(&code) {
             Ok(program) => {
                 let ram = Ram::new(
                     program,
@@ -167,13 +169,18 @@ impl CodeRunner {
                     Box::new(self.writer.clone()),
                 );
 
-                Dispatch::global().reduce_mut(|s: &mut Store| s.read_only = true);
+                dispatch().reduce_mut(|s: &mut Store| s.read_only = true);
 
                 ctx.link().send_message(Msg::DebugAction(message));
                 Some((state, ram))
             }
             Err(e) => {
-                self.error = Some(OutputComponentErrors::ParseError(e));
+                dispatch().reduce_mut(move |store: &mut Store| {
+                    store.errors = e
+                        .into_iter()
+                        .map(OutputComponentErrors::ParseError)
+                        .collect();
+                });
                 None
             }
         }
@@ -181,13 +188,13 @@ impl CodeRunner {
 
     #[allow(clippy::unnecessary_wraps, clippy::unused_self)]
     fn debug_step(&self, ctx: &Context<Self>, mut ram: Ram) -> State {
-        log::info!("Debug Step");
+        log::debug!("Debug Step");
 
         match ram.next() {
             Some(state) => {
                 let registers = state.registers;
                 let line = state.line;
-                Dispatch::global().reduce_mut(|s: &mut Store| {
+                dispatch().reduce_mut(|s: &mut Store| {
                     s.set_registers(registers);
                     s.current_debug_line = line;
                 });
@@ -200,7 +207,7 @@ impl CodeRunner {
 
     #[allow(clippy::unnecessary_wraps, clippy::unused_self)]
     fn debug_continue(&self, ctx: &Context<Self>, mut ram: Ram) -> State {
-        log::info!("Debug Continue");
+        log::debug!("Debug Continue");
 
         let breakpoints = &self.store.breakpoints;
         let kind;
@@ -222,14 +229,17 @@ impl CodeRunner {
                 }
             }),
         };
-        let state: RamState = ram.as_ref().into();
-        let registers = state.registers;
-        let line = state.line;
 
-        Dispatch::global().reduce_mut(|s: &mut Store| {
-            s.set_registers(registers);
-            s.current_debug_line = line;
-        });
+        if kind == Pause {
+            let state: RamState = ram.as_ref().into();
+            let registers = state.registers;
+            let line = state.line;
+
+            dispatch().reduce_mut(|s: &mut Store| {
+                s.set_registers(registers);
+                s.current_debug_line = line;
+            });
+        }
 
         Some((kind, ram))
     }
@@ -240,15 +250,18 @@ impl CodeRunner {
         let (_, ram) = debug?;
 
         let state: RamState = ram.into();
-        self.error = state.error.map(OutputComponentErrors::InterpretError);
 
         let registers = state.registers;
-        let line = state.line;
+        let error = state.error;
 
-        Dispatch::global().reduce_mut(|s: &mut Store| {
+        dispatch().reduce_mut(|s: &mut Store| {
             s.set_registers(registers);
             s.read_only = false;
-            s.current_debug_line = line;
+            s.current_debug_line = 0;
+            s.errors = error
+                .map(OutputComponentErrors::InterpretError)
+                .into_iter()
+                .collect();
         });
 
         None

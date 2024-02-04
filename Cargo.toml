@@ -6,19 +6,20 @@ description = "Webgui for ramemu"
 readme = "README.md"
 repository = "https://github.com/AVO-cado-team/ram-webgui"
 license = "GPL3"
-keywords = ["yew", "trunk", "ram"]
-categories = ["gui", "wasm", "web-programming"]
+keywords = ["yew", "ram", "monaco"]
+categories = ["gui", "wasm", "web-programming", "editor", "ide"]
 default-run = "ram-webgui"
 
 [[bin]]
 name = "ram-webgui"
 path = "src/main.rs"
 
-# [[bin]]
-# name = "hydrated"
-# path = "src/bin/hydrated.rs"
+[[bin]]
+name = "hydrated"
+path = "src/bin/hydrated.rs"
 
 [features]
+default = ["log/max_level_info"]
 ssr = ["yew/ssr", "yew/hydration", "futures"]
 
 [profile.release]
@@ -54,3 +55,25 @@ features = ["yew", "yew-components"]
 git = "https://github.com/AVO-cado-team/ramemu.git"
 
 
+[workspace.lints]
+
+[workspace.lints.clippy]
+use_self = "warn"
+pedantic = "warn"
+perf = "warn"
+missing-assert-message = "warn"
+
+module-name-repetitions = "allow"
+default-trait-access = "allow"
+similar-names = "allow"
+manual-assert = "allow"
+redundant-closure-for-method-calls = "allow"
+redundant_closure = "allow"
+single-match-else = "allow"
+too-many-lines = "allow"
+
+cast-precision-loss = "allow"
+cast-possible-wrap = "allow"
+cast-possible-truncation = "allow"
+cast-sign-loss = "allow"
+cast-lossless = "allow"

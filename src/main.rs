@@ -1,21 +1,8 @@
-#![allow(non_camel_case_types)]
-
-mod about_popup;
-mod app;
-mod code_editor;
-mod code_runner;
-mod header;
-mod io;
-mod memory;
-mod monaco_ram;
-mod utils;
-mod store;
-
 use std::panic::{self, PanicInfo};
 
-pub use app::App;
+use ram_webgui::App;
 
-fn main() {
+pub fn main() {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     panic::set_hook(Box::new(handle_crash));
 

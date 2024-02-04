@@ -3,10 +3,10 @@
   position: fixed;
   top: 7%;
   right: 0;
-  // transform: translate(-100%, -100%);
   background: rgba(0, 0, 0, 0.8);
   z-index: 999;
   margin: .5em calc(13px + .5em);
+  border-radius: 20px;
 }
 
 .about-us-block {
@@ -33,6 +33,7 @@
   background: #282c34;
   border: 1px solid #72767f5c;
   padding: 15px;
+  border-radius: 20px;
 }
 
 .about-us-block .authors {

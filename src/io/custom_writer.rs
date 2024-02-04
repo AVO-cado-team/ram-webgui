@@ -16,7 +16,7 @@ impl CustomWriter {
 impl Write for CustomWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let data = String::from_utf8_lossy(buf).to_string();
-        log::info!("Writing to custom writer: {:?}", &data);
+        log::debug!("Writing to custom writer: {:?}", &data);
         self.on_write.emit(data);
         Ok(buf.len())
     }

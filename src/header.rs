@@ -53,19 +53,38 @@ pub fn header(props: &Props) -> Html {
     let on_step = props.on_step.clone();
     let on_stop = props.on_stop.clone();
 
+    let author = gloo::utils::window()
+        .location()
+        .search()
+        .expect("No search in URL!")
+        .split('&')
+        .find(|x| x.starts_with("?author="))
+        .map(|x| x.replace("?author=", ""))
+        .map(|x| x.replace("%20", " "));
+
     html! {
       <header>
           if *show_popup {
             <AboutPopup popup_ref={popup_ref.clone()}/>
           }
-          <div class="logo">
-            <a href="https://www.fiit.stuba.sk/" alt="FIIT">
-              <img src="assets/logo_fiit.png" alt="FIIT logo" />
-            </a>
+          <div class="header-left">
+            <div class="logo">
+              <a href="https://www.fiit.stuba.sk/" alt="FIIT">
+                <img src="assets/logo_fiit.png" alt="FIIT logo" />
+              </a>
+            </div>
+            <div class="code-author-container">
+              if let Some(author) = author {
+                  <div class="code-author">
+                    {"Code Author: "}
+                    <span class="code-author-name">{author}</span>
+                  </div>
+              }
+            </div>
           </div>
           <div class="controls">
-            <button onclick={move |_| on_start.emit(())} class="control-btn"><div class="compile-btn"/></button>
-            <button onclick={move |_| on_step.emit(())} class="control-btn"><div class="pause-btn"/></button>
+            <button onclick={move |_| on_start.emit(())} class="control-btn"><div class="start-btn"/></button>
+            <button onclick={move |_| on_step.emit(())} class="control-btn"><div class="step-btn"/></button>
             <button onclick={move |_| on_stop.emit(())} class="control-btn"><div class="stop-btn"/></button>
           </div>
           <div class="help">
@@ -74,7 +93,7 @@ pub fn header(props: &Props) -> Html {
               class="about-us"
               ref={popup_button_ref}
             >
-              {"About Us"}
+              {"About Project"}
             </button>
           </div>
       </header>
