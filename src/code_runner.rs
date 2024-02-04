@@ -9,11 +9,9 @@ use crate::store::dispatch;
 use crate::store::Store;
 
 use ramemu::parser::parse;
-use ramemu::program::Program;
 use ramemu::ram::Ram;
 use ramemu::ram::RamState;
 
-use yew::macros;
 use yew::prelude::*;
 use yewdux::Dispatch;
 

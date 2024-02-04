@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use ramemu::errors::{InterpretError, ParseError};
 use yew::prelude::*;
 
