@@ -18,10 +18,10 @@ pub fn output_component(props: &Props) -> Html {
     let errors = props.errors.iter().map(|err| match err {
         // TODO:
         OutputComponentErrors::InterpretError(err) => {
-            html! { <div class="console-runtime-error-fg console-bold">{format!("{err:?}")}</div> }
+            html! { <div class="console-runtime-error-fg console-bold">{format!("{err}")}</div> }
         }
         OutputComponentErrors::ParseError(err) => {
-            html! { <div class="console-parse-error-fg console-bold">{format!("{err:?}")}</div> }
+            html! { <div class="console-parse-error-fg console-bold">{format!("{err}")}</div> }
         }
     });
     html! {

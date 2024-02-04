@@ -1,6 +1,6 @@
 # RAM WebGUI
 
-![Version 0.1.2](https://img.shields.io/badge/version-0.1.2-blue.svg)
+![Version 0.2.0](https://img.shields.io/badge/version-0.1.2-blue.svg)
 [![License](https://img.shields.io/badge/license-GNU3-blue.svg)](./LICENSE)
 [![AVO-cado-team](https://img.shields.io/badge/Github-AVO--cado--team-green.svg?style=flat)](https://github.com/AVO-cado-team/)
 

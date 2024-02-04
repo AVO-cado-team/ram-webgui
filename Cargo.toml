@@ -1,6 +1,6 @@
 [package]
 name = "ram-webgui"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2021"
 description = "Webgui for ramemu"
 readme = "README.md"
@@ -26,7 +26,7 @@ ssr = ["yew/ssr", "yew/hydration", "futures"]
 lto = true
 codegen-units = 1
 strip = "debuginfo"
-opt-level = 3
+opt-level = "z"
 
 [dependencies]
 yew = { version = "0.21", features = ["csr"] }
@@ -53,6 +53,7 @@ features = ["yew", "yew-components"]
 
 [dependencies.ramemu]
 git = "https://github.com/AVO-cado-team/ramemu.git"
+tag = "0.1.9"
 
 
 [workspace.lints]
