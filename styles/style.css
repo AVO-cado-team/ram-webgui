@@ -54,19 +54,56 @@ a:hover {
   border-bottom: 2px solid #5E81AC;
 }
 
+.header-left {
+  display: flex;
+  /* flex-direction: column; */
+  /* justify-content: center; */
+}
+
 .logo {
-  width: 8%;
+  max-width: 7em;
   height: auto;
   display: inline-block;
+  padding: 0.6em;
+  margin: 0.2em;
+  border-radius: 10px;
 }
 
 .logo img {
-  width: 100%;
-  height: auto;
   max-width: 100%;
-  max-height: 100%;
-  margin: 1em 1em 0.9em 1em;
 }
+
+.logo:hover {
+  cursor: pointer;
+  opacity: 0.8;
+  transition: 0.5s;
+  background-color: #2c3038;
+}
+
+.code-author-container {
+  display: flex;
+  align-items: flex-start;
+  width: 0.1em;
+  font-size: 0.6rem;
+  font-weight: 400;
+  user-select: none;
+  margin-top: 1.5em;
+}
+
+.code-author {
+  color: #2E3440;
+  background-color: #EBCB8B;
+  border-radius: 100px;
+  white-space: nowrap;
+  padding: 0.5em;
+}
+
+.code-author-name {
+  font-weight: 600;
+  color: #2E3440;
+}
+
+
 
 .controls {
   display: flex;
@@ -99,9 +136,22 @@ a:hover {
   color: inherit;
   margin-right: 1em;
   color: white;
-  font-size: 1rem;
   padding: 10px 15px;
   font-family: Droid Sans Mono, monospace;
+  font-size: 1.3rem;
+  border-radius: 5px;
+  background-color: #2c3038;
+  transition: 0.5s;
+}
+
+button.about-us:hover {
+  cursor: pointer;
+  background-color: #434C5E;
+  border-radius: 10px;
+}
+
+button.about-us:active {
+  background-color: #2c3038;
 }
 
 .control-btn div {
@@ -112,7 +162,7 @@ a:hover {
 }
 
 .control-btn:hover {
-  animation-duration: 1s;
+  transform: scale(1.1);
   cursor: pointer;
   background-color: #434C5E;
   border-radius: 10px;

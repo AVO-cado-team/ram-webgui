@@ -14,7 +14,11 @@ pub fn about_popup(props: &Props) -> Html {
           <div class="about-us-block">
               <div class="about-info-block">
                 <h1>{ "About project" }</h1>
-                <p>{ "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sit amet dui iaculis velit consectetur sagittis vitae at sem. Aliquam id lacus at nibh accumsan tincidunt et ac eros. Nullam sed malesuada lectus. Nulla sed magna a odio mattis sodales nec in augue. Praesent imperdiet." }</p>
+                <p>
+                    { "If something irks you about our project, we're all ears and open arms for " }
+                    <a href="https://github.com/AVO-cado-team/ram-webgui?tab=readme-ov-file#contributing">{ "contributions" }</a>
+                    { ". Dive in; your input might be the magic touch we need!" }
+                </p>
                 <div class="authors">
                     <h3>{ "Authors:" }</h3>
                     <br />
