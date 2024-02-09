@@ -1,5 +1,5 @@
-use js_sys::{Array, Object};
-use wasm_bindgen::{JsCast, JsValue};
+use js_sys::{wasm_bindgen, Array, Object};
+use wasm_bindgen::{prelude::*, JsCast, JsValue};
 use web_sys::HtmlAnchorElement;
 
 use monaco::api::{CodeEditor, TextModel};
@@ -113,4 +113,14 @@ pub fn download_code(content: &str) -> Result<(), JsValue> {
     element.click();
     body.remove_child(&element)?;
     Ok(())
+}
+
+pub fn copy_to_clipboard(text: &str) {
+    copy_to_clipboard_js(text);
+}
+
+#[wasm_bindgen(module = "/js/copyToClipboard.js")]
+extern "C" {
+    #[wasm_bindgen(js_name = "copyToClipboard")]
+    fn copy_to_clipboard_js(text: &str);
 }

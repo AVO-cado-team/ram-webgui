@@ -10,6 +10,7 @@ pub struct Props {
     pub on_run: Callback<()>,
     pub on_step: Callback<()>,
     pub on_stop: Callback<()>,
+    pub on_copy: Callback<()>,
 }
 
 #[function_component(Header)]
@@ -52,15 +53,25 @@ pub fn header(props: &Props) -> Html {
     //  TODO: Replace Image from pause to step
     let on_step = props.on_step.clone();
     let on_stop = props.on_stop.clone();
+    let on_copy = props.on_copy.clone();
 
     let author = gloo::utils::window()
         .location()
         .search()
         .expect("No search in URL!")
+        .replace('?', "")
         .split('&')
-        .find(|x| x.starts_with("?author="))
-        .map(|x| x.replace("?author=", ""))
+        .find(|x| x.starts_with("author="))
+        .map(|x| x.replace("author=", ""))
         .map(|x| x.replace("%20", " "));
+
+    // we should fix style for this
+    #[allow(unused_variables)]
+    let is_from_url = gloo::utils::window()
+        .location()
+        .search()
+        .expect("no search in url!")
+        .contains("code=");
 
     html! {
       <header>
@@ -86,6 +97,7 @@ pub fn header(props: &Props) -> Html {
             <button onclick={move |_| on_start.emit(())} class="control-btn"><div class="start-btn"/></button>
             <button onclick={move |_| on_step.emit(())} class="control-btn"><div class="step-btn"/></button>
             <button onclick={move |_| on_stop.emit(())} class="control-btn"><div class="stop-btn"/></button>
+            <button onclick={move |_| on_copy.emit(())} class="control-btn"><div class="copy-btn"/></button>
           </div>
           <div class="help">
             <button

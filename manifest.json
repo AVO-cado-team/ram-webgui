@@ -9,7 +9,7 @@
         }
     ],
     "lang": "en-US",
-    "start_url": "/",
+    "start_url": "/ram-webgui/",
     "display": "standalone",
     "background_color": "white",
     "theme_color": "white"

@@ -11,7 +11,7 @@ use crate::{
     header::Header,
     memory::Memory,
     store::{dispatch, Store},
-    utils::HydrationGate,
+    utils::{copy_to_clipboard, HydrationGate},
 };
 
 pub struct App {
@@ -25,6 +25,7 @@ pub enum Msg {
     DebugStop,
     DebugStep,
     DebugStart,
+    CopyToClipboard,
     SetStore(Rc<Store>),
 }
 
@@ -38,6 +39,7 @@ impl Component for App {
         let on_run = ctx.link().callback(|()| Msg::DebugStart);
         let on_stop = ctx.link().callback(|()| Msg::DebugStop);
         let on_step = ctx.link().callback(|()| Msg::DebugStep);
+        let on_copy = ctx.link().callback(|()| Msg::CopyToClipboard);
         let store = &self.store;
 
         let editor_placeholder = html! {<div id="container" class="editor-container placeholder"/>};
@@ -47,7 +49,7 @@ impl Component for App {
         html! {
         <YewduxRoot>
             <main id="ram-web">
-                <Header {on_run} {on_step} {on_stop} />
+                <Header {on_run} {on_step} {on_stop} {on_copy} />
 
                 <div class="interface">
                     <div class="editor-registers">
@@ -110,6 +112,19 @@ impl Component for App {
             }
             Msg::DebugStop => {
                 self.code_runner_dispatch.emit(DebugAction::Stop);
+            }
+            Msg::CopyToClipboard => {
+                let text_model = &self.store.get_model();
+                let value = text_model.get_value();
+                let encoded_value = urlencoding::encode(&value);
+                let current_page = web_sys::window()
+                    .expect("no global window")
+                    .location()
+                    .href()
+                    .expect("no href");
+                let url = format!("{}?code={}", current_page, encoded_value);
+                log::info!("Copying to clipboard: {}", url);
+                copy_to_clipboard(&url);
             }
         }
 

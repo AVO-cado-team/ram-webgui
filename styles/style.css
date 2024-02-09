@@ -1,3 +1,10 @@
+@media screen and (max-width: 767px) {
+  * {
+    display: none !important;
+  }
+}
+
+
 * {
   margin: 0;
   padding: 0;
@@ -181,6 +188,9 @@ button.about-us:active {
   background: url("assets/stop.svg") center / 100% no-repeat;
 }
 
+.copy-btn {
+  background: url("assets/start.svg") center / 100% no-repeat;
+}
 
 .diskette-btn {
   width: 18px;

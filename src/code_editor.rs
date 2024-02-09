@@ -104,6 +104,20 @@ impl Component for CustomEditor {
         });
         std::mem::forget(text_model_saver);
 
+        let code_in_url = gloo::utils::window()
+            .location()
+            .search()
+            .expect("No search in URL!")
+            .replace('?', "")
+            .split('&')
+            .find(|x| x.starts_with("code="))
+            .map(|x| x.replace("code=", ""));
+
+        if let Some(code_in_url) = code_in_url {
+            if let Ok(code) = urlencoding::decode(&code_in_url) {
+                text_model.set_value(&code);
+            }
+        }
         Self { editor_ref }
     }
 
