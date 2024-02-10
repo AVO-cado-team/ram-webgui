@@ -124,12 +124,16 @@ impl Component for App {
             #[cfg(not(feature = "ssr"))]
             Msg::CopyToClipboard => {
                 let text_model = &self.store.get_model();
+                let stdin = &self.store.stdin;
                 let value = text_model.get_value();
-                let encoded_value = urlencoding::encode(&value);
+
+                let code = urlencoding::encode(&value);
                 let author = get_author().map(|it| urlencoding::encode(&it).into_owned());
+                let stdin = urlencoding::encode(stdin);
+
                 let current_page = gloo::utils::window().location().origin();
                 let current_page = current_page.expect("no origin");
-                let mut url = format!("{}?code={}", current_page, encoded_value);
+                let mut url = format!("{current_page}?stdin={stdin}&code={code}");
 
                 if let Some(author) = author {
                     url += "&author=";

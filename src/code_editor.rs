@@ -104,20 +104,24 @@ impl Component for CustomEditor {
         });
         std::mem::forget(text_model_saver);
 
-        let code_in_url = gloo::utils::window()
-            .location()
-            .search()
-            .expect("No search in URL!")
-            .replace('?', "")
-            .split('&')
-            .find(|x| x.starts_with("code="))
-            .map(|x| x.replace("code=", ""));
+        let search = gloo::utils::window().location().search();
+        let search = search.unwrap_or_default().replace('?', "");
+        let search = search.split('&');
+        let search = search.filter(|x| x.starts_with("code=") || x.starts_with("=stdin"));
 
-        if let Some(code_in_url) = code_in_url {
-            if let Ok(code) = urlencoding::decode(&code_in_url) {
-                text_model.set_value(&code);
+        for entry in search {
+            if let Some(code_in_url) = entry.strip_prefix("code=") {
+                if let Ok(code) = urlencoding::decode(&code_in_url) {
+                    text_model.set_value(&code);
+                    dispatch().reduce_mut(|s: &mut Store| s.change_model());
+                }
+            } else if let Some(stdin) = entry.strip_prefix("stdin=") {
+                if let Ok(stdin) = urlencoding::decode(&stdin) {
+                    dispatch().reduce_mut(|s: &mut Store| s.stdin = stdin.to_string());
+                }
             }
         }
+
         Self { editor_ref }
     }
 
