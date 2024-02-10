@@ -9,7 +9,7 @@ use yewdux::prelude::*;
 
 use crate::{code_editor::DEFAULT_CODE, io::output::OutputComponentErrors};
 
-#[cfg(not(target = "wasm32-unknown-unknown"))]
+#[cfg(feature = "ssr")]
 pub fn dispatch() -> Dispatch<Store> {
     use yewdux::Context;
     thread_local! {
@@ -19,7 +19,7 @@ pub fn dispatch() -> Dispatch<Store> {
     Dispatch::new(&CONTEXT.with(|context| context.clone()))
 }
 
-#[cfg(target = "wasm32-unknown-unknown")]
+#[cfg(not(feature = "ssr"))]
 pub fn dispatch() -> Dispatch<Store> {
     Dispatch::global()
 }
