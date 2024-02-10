@@ -1,4 +1,4 @@
-use js_sys::{wasm_bindgen, Array, Object};
+use js_sys::{Array, Object};
 use wasm_bindgen::{prelude::*, JsCast, JsValue};
 use web_sys::HtmlAnchorElement;
 

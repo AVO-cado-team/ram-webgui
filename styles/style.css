@@ -1,6 +1,15 @@
 @media screen and (max-width: 767px) {
-  * {
+  body * {
     display: none !important;
+  }
+  body {
+    padding: 1rem;
+  }
+  body::before {
+    content: "This website is not available on mobile devices. Please use a desktop or laptop to view this website.";
+    display: block;
+    font-size: 1.5rem;
+    color: #fff;
   }
 }
 
