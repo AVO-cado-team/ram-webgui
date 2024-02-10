@@ -131,9 +131,10 @@ impl Component for App {
                 let author = get_author().map(|it| urlencoding::encode(&it).into_owned());
                 let stdin = urlencoding::encode(stdin);
 
-                let current_page = gloo::utils::window().location().origin();
-                let current_page = current_page.expect("no origin");
-                let mut url = format!("{current_page}?stdin={stdin}&code={code}");
+                let location = gloo::utils::window().location();
+                let origin = location.origin().expect("no origin");
+                let pathname = location.pathname().unwrap_or_default();
+                let mut url = format!("{origin}{pathname}?stdin={stdin}&code={code}");
 
                 if let Some(author) = author {
                     url += "&author=";
