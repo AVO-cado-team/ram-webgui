@@ -9,16 +9,17 @@ use yewdux::prelude::*;
 
 use crate::{code_editor::DEFAULT_CODE, io::output::OutputComponentErrors};
 
-// #[cfg(target = "wasm32-unknown-unknown")]
-// pub fn dispatch() -> Dispatch<Store> {
-//     use yewdux::Context;
-//     thread_local! {
-//         static CONTEXT: Context = Default::default();
-//     }
-//
-//     Dispatch::new(&CONTEXT.with(|context| context.clone()))
-// }
+#[cfg(not(target = "wasm32-unknown-unknown"))]
+pub fn dispatch() -> Dispatch<Store> {
+    use yewdux::Context;
+    thread_local! {
+        static CONTEXT: Context = Default::default();
+    }
 
+    Dispatch::new(&CONTEXT.with(|context| context.clone()))
+}
+
+#[cfg(target = "wasm32-unknown-unknown")]
 pub fn dispatch() -> Dispatch<Store> {
     Dispatch::global()
 }
