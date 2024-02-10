@@ -23,20 +23,6 @@
   <link data-trunk rel="css" href="./styles/monaco-tweaks.css" />
   <link data-trunk rel="copy-dir" href="./assets">
   <link data-trunk rel="copy-dir" href="./fonts">
-
-  <link data-trunk rel="copy-file" href="manifest.json">
-  <link data-trunk rel="copy-file" href="./js/service-worker.js">
-  <link rel="manifest" href="./manifest.json">
-  <script>
-    window.onload = () => {
-      'use strict';
-
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker
-          .register('./service-worker.js')
-      }
-    }
-  </script>
 </head>
 
 <body>
