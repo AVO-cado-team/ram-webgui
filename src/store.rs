@@ -5,16 +5,22 @@ use monaco::api::TextModel;
 use monaco::yew::CodeEditorLink;
 use ramemu::registers::Registers;
 use serde::{Deserialize, Serialize};
-use yewdux::{prelude::*, Context};
+use yewdux::prelude::*;
 
 use crate::{code_editor::DEFAULT_CODE, io::output::OutputComponentErrors};
 
-thread_local! {
-    static CONTEXT: Context = Default::default();
-}
+// #[cfg(target = "wasm32-unknown-unknown")]
+// pub fn dispatch() -> Dispatch<Store> {
+//     use yewdux::Context;
+//     thread_local! {
+//         static CONTEXT: Context = Default::default();
+//     }
+//
+//     Dispatch::new(&CONTEXT.with(|context| context.clone()))
+// }
 
 pub fn dispatch() -> Dispatch<Store> {
-    Dispatch::new(&CONTEXT.with(|context| context.clone()))
+    Dispatch::global()
 }
 
 #[derive(Default, PartialEq, Store, Clone, Serialize, Deserialize)]
@@ -31,6 +37,8 @@ pub struct Store {
     pub current_debug_line: usize,
     #[serde(skip)]
     registers: Registers<i64>,
+    #[serde(skip)]
+    pub copy_button_state: Option<bool>,
 
     #[cfg(not(feature = "ssr"))]
     text_model: TextModelWrapper,

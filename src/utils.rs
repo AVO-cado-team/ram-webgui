@@ -1,12 +1,19 @@
+use wasm_bindgen::{prelude::*, JsValue};
+
+#[cfg(not(feature = "ssr"))]
 use js_sys::{Array, Object};
-use wasm_bindgen::{prelude::*, JsCast, JsValue};
+#[cfg(not(feature = "ssr"))]
 use web_sys::HtmlAnchorElement;
 
-use monaco::api::{CodeEditor, TextModel};
-use monaco::sys::editor::{ICodeEditor, IEditor, IIdentifiedSingleEditOperation, ITextModel};
-use monaco::sys::{Position, Range};
+#[cfg(not(feature = "ssr"))]
+use monaco::{
+    api::{CodeEditor, TextModel},
+    sys::{
+        editor::{ICodeEditor, IEditor, IIdentifiedSingleEditOperation, ITextModel},
+        Position, Range,
+    },
+};
 
-use yew::function_component;
 use yew::prelude::*;
 
 #[function_component]
@@ -29,6 +36,7 @@ pub struct Props {
     pub placeholder: Html,
 }
 
+#[cfg(not(feature = "ssr"))]
 fn get_selection_or_cursor_range(ieditor: &ICodeEditor) -> Option<Range> {
     let selection = ieditor.get_selection()?;
 
@@ -48,6 +56,7 @@ fn get_selection_or_cursor_range(ieditor: &ICodeEditor) -> Option<Range> {
     }
 }
 
+#[cfg(not(feature = "ssr"))]
 pub fn comment_code(editor: &CodeEditor, model: &TextModel) -> Result<(), ()> {
     let ieditor: &ICodeEditor = editor.as_ref();
     let range = get_selection_or_cursor_range(ieditor).ok_or(())?;
@@ -93,6 +102,26 @@ pub fn comment_code(editor: &CodeEditor, model: &TextModel) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn get_author() -> Option<String> {
+    gloo::utils::window()
+        .location()
+        .search()
+        .unwrap_or_default()
+        .replace('?', "")
+        .split('&')
+        .find_map(|x| x.strip_prefix("author="))
+        .map(|x| x.replace('+', "%20"))
+        .and_then(|x| Some(urlencoding::decode(&x).ok()?.into_owned()))
+        .and_then(|x| {
+            let res: String = x
+                .chars()
+                .filter(|c| c.is_alphanumeric() || *c == ',' || *c == '.' || *c == ' ')
+                .collect();
+            (!res.is_empty()).then_some(res)
+        })
+}
+
+#[cfg(not(feature = "ssr"))]
 pub fn download_code(content: &str) -> Result<(), JsValue> {
     let document = gloo::utils::document();
     let body = gloo::utils::body();
@@ -115,12 +144,32 @@ pub fn download_code(content: &str) -> Result<(), JsValue> {
     Ok(())
 }
 
+#[cfg(not(feature = "ssr"))]
+fn clipboard_callback(success: bool) {
+    use crate::store::dispatch;
+    use std::time::Duration;
+    use yew::platform::time::sleep;
+
+    dispatch().reduce_mut(|store| store.copy_button_state = Some(success));
+    yew::platform::spawn_local(async {
+        sleep(Duration::from_secs(3)).await;
+        dispatch().reduce_mut(|store| store.copy_button_state = None)
+    })
+}
+
+#[cfg(not(feature = "ssr"))]
 pub fn copy_to_clipboard(text: &str) {
-    copy_to_clipboard_js(text);
+    thread_local! {
+        static CLOSURE: Closure<dyn FnMut(JsValue)> = Closure::wrap(Box::new(|v| {
+            clipboard_callback(v.as_bool().unwrap_or_default());
+        }));
+    }
+
+    CLOSURE.with(|c| copy_to_clipboard_js(text, c))
 }
 
 #[wasm_bindgen(module = "/js/copyToClipboard.js")]
 extern "C" {
     #[wasm_bindgen(js_name = "copyToClipboard")]
-    fn copy_to_clipboard_js(text: &str);
+    fn copy_to_clipboard_js(text: &str, callback: &Closure<dyn FnMut(JsValue)>);
 }

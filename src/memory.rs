@@ -11,7 +11,6 @@ const STEP_SIZE: usize = 50;
 pub fn Memory() -> Html {
     let registers = use_selector(|s: &Store| s.get_registers().clone());
 
-    // TODO: Should it be in store? So we can persist it?
     let starting_index = use_state(|| 0);
 
     let register_entries = (0..WINDOW_LENGTH)

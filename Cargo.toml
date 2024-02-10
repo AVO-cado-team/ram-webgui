@@ -44,7 +44,17 @@ serde = { version = "1.0.193", features = ["derive"] }
 
 [dependencies.web-sys]
 version = "0.3.61"
-features = ['Document', 'Window', 'Element', 'HtmlElement', 'Node', 'CssStyleDeclaration', 'HtmlAnchorElement']
+features = [
+  'Document',
+  'Window',
+  'Element',
+  'HtmlElement',
+  'Node',
+  'CssStyleDeclaration',
+  'HtmlAnchorElement',
+  'Navigator',
+  'Clipboard',
+]
 
 [dependencies.monaco]
 git = "https://github.com/siku2/rust-monaco/"

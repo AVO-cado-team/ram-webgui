@@ -2,8 +2,9 @@ use gloo::events::EventListener;
 use wasm_bindgen::JsCast;
 use web_sys::Node;
 use yew::prelude::*;
+use yewdux::use_selector;
 
-use crate::about_popup::AboutPopup;
+use crate::{about_popup::AboutPopup, store::Store, utils::get_author};
 
 #[derive(Default, Clone, PartialEq, Properties)]
 pub struct Props {
@@ -19,6 +20,7 @@ pub fn header(props: &Props) -> Html {
     let popup_button_ref = use_node_ref();
     let show_popup = use_state_eq(|| false);
     let event_listener = use_state(|| None);
+    let copy_button_state = *use_selector(|store: &Store| store.copy_button_state);
 
     let callback = use_callback(
         (
@@ -55,15 +57,7 @@ pub fn header(props: &Props) -> Html {
     let on_stop = props.on_stop.clone();
     let on_copy = props.on_copy.clone();
 
-    let author = gloo::utils::window()
-        .location()
-        .search()
-        .expect("No search in URL!")
-        .replace('?', "")
-        .split('&')
-        .find(|x| x.starts_with("author="))
-        .map(|x| x.replace("author=", ""))
-        .map(|x| x.replace("%20", " "));
+    let author = get_author();
 
     // we should fix style for this
     #[allow(unused_variables)]
@@ -72,6 +66,14 @@ pub fn header(props: &Props) -> Html {
         .search()
         .expect("no search in url!")
         .contains("code=");
+
+    log::debug!("{copy_button_state:?}");
+
+    let copy_button_class = match copy_button_state {
+        Some(true) => "btn--success",
+        Some(false) => "btn--error",
+        None => "",
+    };
 
     html! {
       <header>
@@ -97,7 +99,9 @@ pub fn header(props: &Props) -> Html {
             <button onclick={move |_| on_start.emit(())} class="control-btn"><div class="start-btn"/></button>
             <button onclick={move |_| on_step.emit(())} class="control-btn"><div class="step-btn"/></button>
             <button onclick={move |_| on_stop.emit(())} class="control-btn"><div class="stop-btn"/></button>
-            <button onclick={move |_| on_copy.emit(())} class="control-btn"><div class="copy-btn"/></button>
+            <button onclick={move |_| on_copy.emit(())} class={classes!("control-btn", copy_button_class)}>
+                    <div class="copy-btn"/>
+            </button>
           </div>
           <div class="help">
             <button
